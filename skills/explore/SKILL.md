@@ -27,17 +27,19 @@ cite it.
 
 ## 2. Retrieve (cheap, parallel)
 
-Spawn one `dragonhoard:scout` per factual question, all in **one message** so they run in parallel.
-Typical questions: does the library support X in our version; how the codebase already does Y;
-what an API returns. Drop options the facts rule out.
+Run `dragonhoard.py role scout` and follow what it prints, one scout per factual question. Where
+the host has scout subagents, launch them together so they run in parallel. Typical questions:
+does the library support X in our version; how the codebase already does Y; what an API returns.
+Drop options the facts rule out.
 
 If only one option survives, skip to step 5 and present it, with the facts that eliminated the
 others.
 
 ## 3. Spike (parallel, isolated, bounded)
 
-Spawn one `dragonhoard:spiker` per surviving option, at most 3, in **one message**, each with
-`isolation: "worktree"`. Give each spiker:
+Run `dragonhoard.py role spiker` and follow what it prints: one spiker per surviving option, at most
+3, each in its own isolated worktree. They run in parallel where the host has spiker subagents,
+and one at a time inline otherwise. Give each spiker:
 - the option;
 - its success criterion command;
 - the files it may touch;
@@ -48,15 +50,17 @@ Spikes are evidence, not delivery. Their code is never merged.
 
 ## 4. Judge
 
-Spawn `dragonhoard:judge` with the question, the criteria and every spiker report. It verifies the
-reports, then returns a comparison table, a recommendation and warnings.
+Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, stop and ask the
+owner to switch models before judging. Give the judge the question, the criteria and every
+spiker report. It verifies the reports, then returns a comparison table, a recommendation and
+warnings.
 
 ## 5. Owner picks
 
-Use AskUserQuestion. Put the judge's recommendation first, labelled "(Recommended)". Each
-option's description gives its verdict, its criterion result and its cost. Use the `preview`
-field to show each report's evidence lines. The owner may also choose "none — rethink" via
-"Other".
+Ask the owner and wait for the answer (in Claude Code, use AskUserQuestion with the evidence in
+each option's `preview`). Put the judge's recommendation first, labelled "(Recommended)". For
+each option, give its verdict, its criterion result and its cost. The owner may also answer
+"none — rethink".
 
 ## 6. Record
 

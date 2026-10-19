@@ -85,7 +85,34 @@ Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier bl
 ## Event kinds (`logs/events.jsonl`)
 
 `task.started` · `attempt` · `option.chosen` · `task.blocked` · `task.done` · `gate.run` ·
-`lesson.approved` · `lesson.rejected` · `lesson.revoked`.
+`lesson.approved` · `lesson.rejected` · `lesson.revoked` · `models.changed`.
 
 The journal explains *why*; the event log lets the next session see *what happened* across the
 whole journey without reading every journal. `DIGEST.md` is the compact view of both.
+
+## Roles and models
+
+Three roles help the main session. Their models live in `dragonhoard.json` under `models`.
+
+| Role | Used in | Needs |
+|---|---|---|
+| `scout` | Explore: fact retrieval | fast, cheap, reliable tool use |
+| `spiker` | Explore: one throwaway prototype per option | solid coding at mid cost |
+| `judge` | Explore comparison, lesson review | strongest available reasoning |
+
+- `dragonhoard.py models` shows the current mapping and what each role needs.
+- The models skill has the current model suggest a mapping; the owner confirms it.
+- `dragonhoard.py role <name>` prints how to run a role on this host.
+
+## Host notes
+
+dragonhoard runs in several coding agents. Differences are handled by the CLI, not by these docs:
+
+- **Asking the owner:** where the skills say "ask the owner and wait", use the host's question
+  tool if it has one; otherwise ask in chat and stop until they answer.
+- **Roles:** always follow `dragonhoard.py role <name>`.
+  - Hosts with per-agent models (Claude Code, OpenCode, Codex) run roles as subagents.
+  - On other hosts, scout and spiker run inline in the session, and the judge **pauses** so the
+    owner can switch the session to the judge model.
+- **Journal:** for every role run, record which model ran it and how, e.g. `role judge ran on
+  <model> via subagent`.

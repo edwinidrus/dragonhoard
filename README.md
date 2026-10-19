@@ -16,6 +16,10 @@ later tasks.
 
 ## Install
 
+Requires `python3` (stdlib only).
+
+**Claude Code** (plugin):
+
 ```bash
 claude --plugin-dir /path/to/dragonhoard     # try it for one session
 # or, permanently:
@@ -23,7 +27,29 @@ claude --plugin-dir /path/to/dragonhoard     # try it for one session
 /plugin install dragonhoard@dragonhoard
 ```
 
-Requires `python3` (stdlib only).
+**OpenCode, Codex CLI, Cline, or any agent that reads `AGENTS.md`** (copied into your project):
+
+```bash
+git clone https://github.com/edwinidrus/dragonhoard.git ~/dragonhoard
+cd your-project
+python3 ~/dragonhoard/scripts/dragonhoard.py install --host opencode   # or codex | cline | generic
+```
+
+`install` copies the CLI and templates to `.dragonhoard/`, puts the skills where the host looks
+for them (as `dragonhoard-init`, `dragonhoard-next`, …), and writes role agents where the host
+supports them. It also adds a marked block to `AGENTS.md` (Cline: `.clinerules/dragonhoard.md`)
+that tells the agent to read the digest at session start. Re-run it to upgrade. Text outside the
+markers is never touched.
+
+| Host | Skills | Roles on their own model | Tier |
+|---|---|---|---|
+| Claude Code | plugin | yes (subagents) | full |
+| OpenCode | `.opencode/skills/` | yes (`.opencode/agents/`) | full |
+| Codex CLI | `.agents/skills/` | yes (`.codex/agents/*.toml`) | full |
+| Cline | `.cline/skills/` (enable Skills in settings) | no: inline, judge pauses | inline |
+| Generic (Cursor, Gemini CLI, Copilot, …) | `.agents/skills/` | no: inline, judge pauses | inline |
+
+Details and sources: [docs/hosts.md](docs/hosts.md).
 
 ## Use
 
@@ -34,9 +60,12 @@ Requires `python3` (stdlib only).
 | `/dragonhoard:next` | Works exactly one task through the loop, records real evidence, and stops. |
 | `/dragonhoard:explore` | For an open choice: cheap parallel retrieval, up to 3 parallel spikes in isolated worktrees, a comparison by a frontier model. You pick; the decision is logged. |
 | `/dragonhoard:learn` | Drafts lessons from journals, screens them deterministically, has the judge review them, then asks you to approve each. `revoke L<nn>` removes one. |
+| `/dragonhoard:models` | The current model suggests which model fits each role, using the host's model list and the journey's evidence; you confirm. |
 
-At session start, a hook prints the next task and the memory digest. It stays silent in projects
-without `dragonhoard.json`.
+On other hosts the commands are the skills `dragonhoard-init`, `dragonhoard-next`, and so on.
+
+At session start, the digest is printed: by a hook in Claude Code, and through the `AGENTS.md`
+instruction elsewhere. Nothing is printed in projects without `dragonhoard.json`.
 
 ## What it creates in your project
 
@@ -53,13 +82,19 @@ dragonhoard.json              # {"root": "...", "checks": [...]}
 
 ## Models
 
-| Agent | Model | Job |
-|---|---|---|
-| `scout` | haiku | Read-only fact retrieval with sources. Cheap, run in parallel. |
-| `spiker` | sonnet | One throwaway prototype per option, each in its own git worktree. |
-| `judge` | opus | Compares spike evidence and reviews lessons. Advises only: it can add warnings, never approve. |
+Models are configured per role in `dragonhoard.json`. No model names are hardcoded: the current
+model suggests a mapping with `/dragonhoard:models` and you confirm it.
 
-Every lesson passes four gates: deterministic screen → opus judge → **your approval** → used
-from the next task on. Nothing is approved automatically.
+| Role | Needs | Claude Code default | Job |
+|---|---|---|---|
+| `scout` | fast, cheap, reliable tool use | haiku | Read-only fact retrieval with sources. Run in parallel. |
+| `spiker` | solid coding at mid cost | sonnet | One throwaway prototype per option, each in its own git worktree. |
+| `judge` | strongest available reasoning | opus | Compares spike evidence and reviews lessons. Advises only: it can add warnings, never approve. |
+
+Other hosts start with no models set. On hosts that can't run a subagent on its own model, the
+judge step pauses and asks you to switch the session to the judge model.
+
+Every lesson passes four gates: deterministic screen → judge → **your approval** → used from
+the next task on. Nothing is approved automatically.
 
 The design comes from the hand-built EpisAlpha `implementation/` workspace, generalized.

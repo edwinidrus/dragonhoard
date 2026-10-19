@@ -21,7 +21,8 @@ value.
 
 1. **Read the whole plan.** Also read `<root>/CONSTITUTION.md`, `<root>/README.md`,
    `<root>/LESSONS.md` and the skeletons in `<root>/templates/`. If the project already has
-   code, have one `dragonhoard:scout` map the existing structure; do not read it all yourself.
+   code, run one scout to map the existing structure (`dragonhoard.py role scout` says how). Do
+   not read it all yourself.
 
 2. **Propose the milestone cut, and write nothing yet.** Present `M0..Mn`. For each milestone
    give:
@@ -38,8 +39,8 @@ value.
    - Anything the plan calls "later" or "nice to have" goes into a final milestone, or out of
      scope.
 
-   Confirm with AskUserQuestion: approve, or adjust (the owner says what to change via
-   "Other"). Repeat until approved. Log the approved cut:
+   Ask the owner to approve or adjust, and wait for the answer (in Claude Code, use
+   AskUserQuestion). Repeat until approved. Log the approved cut:
 
    ```bash
    dragonhoard.py log - shape.approved "<n> milestones: M0 <name>, M1 <name>, ..."
@@ -90,6 +91,6 @@ Run this when `dragonhoard.py next` reaches a task with no pack.
    `GATE.md` results, and the `option.chosen` events that affect this milestone. Reality has
    moved since the first shape; the packs must reflect what was actually built.
 2. If the tasks no longer fit (scope, order or contracts changed), propose the change and
-   confirm it with AskUserQuestion before writing anything.
+   ask the owner to confirm it before writing anything.
 3. Write the packs as in A.4. Fill the `[pack]` links in `STATUS.md` and the milestone's
    `PLAN.md`. Log `dragonhoard.py log - shape.milestone "M<n>: <k> packs"`, then run `check`.

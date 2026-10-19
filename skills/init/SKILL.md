@@ -11,19 +11,21 @@ description: >
 
 CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoard.py` below).
 
-1. **Already set up?** If `dragonhoard.json` exists at the project root, report its `root` and
-   stop. Never overwrite it.
+1. **Already set up?** If `dragonhoard.json` at the project root already has a `root`, report it
+   and stop. Never overwrite it. A `dragonhoard.json` holding only `host` (and `models`) was
+   written by `install`; continue.
 
-2. **Ask the root folder, always.** Do not assume one. Use AskUserQuestion:
+2. **Ask the root folder, always.** Do not assume one. Ask the owner and wait for the answer (in
+   Claude Code, use AskUserQuestion). Offer:
    - `implementation/` — building a plan from scratch.
    - `improvement/` — improving an existing system.
-   - The user can type another relative folder via "Other".
+   - Any other relative folder the owner names.
 
 3. **Detect check commands.** Read only the manifests that exist: `pyproject.toml`,
    `package.json` scripts, `Makefile`, `Cargo.toml`, `go.mod`, CI files under `.github/workflows/`.
    Propose the lint, format-check, type-check and test commands the project already uses. Never
-   invent a tool the project does not have. Confirm with AskUserQuestion (proposed set first;
-   the user can edit via "Other"). Zero checks is allowed for a project with no code yet.
+   invent a tool the project does not have. Ask the owner to confirm or edit the proposed set,
+   and wait. Zero checks is allowed for a project with no code yet.
 
 4. **Scaffold.**
 
@@ -40,5 +42,8 @@ CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoa
    security rules. Append each one the owner confirms as a new numbered article after section
    VII. Do not add generic advice.
 
-6. **Hand off.** Show the dragon banner the command printed. Then suggest `/dragonhoard:shape
+6. **Role models.** Run `/dragonhoard:models`. The current model suggests which model fits the
+   scout, spiker and judge roles, and the owner confirms.
+
+7. **Hand off.** Show the dragon banner the command printed. Then suggest `/dragonhoard:shape
    <plan file>` as the next step.

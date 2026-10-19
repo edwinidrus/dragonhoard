@@ -39,8 +39,8 @@ pack's scope.
 Skip this step when the pack's Open options says "none" and you have no unknowns.
 
 Otherwise:
-- **A fact is missing:** spawn `dragonhoard:scout` agents in parallel, one question each, all in
-  one message. They are cheap and read-only.
+- **A fact is missing:** run scouts, one question each, as `dragonhoard.py role scout` says.
+  Scouts are cheap and read-only.
 - **Two or more viable options remain:** run `/dragonhoard:explore`. It spikes options in
   parallel, gets the judge's comparison and asks the owner to pick.
 

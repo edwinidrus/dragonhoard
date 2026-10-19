@@ -14,6 +14,9 @@ and the lesson screen and ledger.
     dragonhoard.py lesson approve --text "..." --provenance "M1-T01#3" --judge "..." --by owner
     dragonhoard.py lesson revoke L01 --reason "..." --by owner
     dragonhoard.py hook                       # SessionStart: banner, next task, digest
+    dragonhoard.py models [--set judge=<model> --why "..."]
+    dragonhoard.py role judge                 # how to run a role on this host
+    dragonhoard.py install --host opencode    # non-Claude hosts: vendor CLI, skills, agents, rules
 
 stdlib only. It never edits source or tests and never reads `.env`.
 """
@@ -33,6 +36,47 @@ from typing import Any
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = PLUGIN_ROOT / "templates"
 CONFIG_NAME = "dragonhoard.json"
+VENDOR_DIR = ".dragonhoard"
+VENDORED = ("scripts", "templates", "assets", "skills", "agents")
+CLI_REF = re.compile(r'"?\$\{CLAUDE_PLUGIN_ROOT\}/scripts/dragonhoard\.py"?')
+BLOCK_START, BLOCK_END = "<!-- dragonhoard:start -->", "<!-- dragonhoard:end -->"
+
+# What each role needs. Requirements only, never model names: the current model suggests
+# concrete models (skills/models). Defaults are Claude Code tier aliases, used only there.
+ROLES: dict[str, dict[str, Any]] = {
+    "scout": {
+        "needs": "fast and cheap, reliable tool use, long context; retrieval, not reasoning",
+        "runs": "often, several in parallel",
+        "default": "haiku",
+        "permission": {"edit": "deny", "bash": "deny", "webfetch": "allow"},
+    },
+    "spiker": {
+        "needs": "solid coding and test running at mid cost",
+        "runs": "up to 3 in parallel, one per option",
+        "default": "sonnet",
+        "permission": {"edit": "allow", "bash": "allow", "webfetch": "allow"},
+    },
+    "judge": {
+        "needs": "strongest available reasoning; cost secondary",
+        "runs": "rarely: option comparison and lesson review",
+        "default": "opus",
+        "permission": {"edit": "deny", "bash": "deny", "webfetch": "deny"},
+    },
+}
+CLAUDE_ALIASES = ("haiku", "sonnet", "opus", "fable")  # values the Agent tool's `model` accepts
+
+# Host differences live here and only here (sources and dates: docs/hosts.md).
+HOSTS: dict[str, dict[str, Any]] = {
+    "claude-code": {"skills": None, "agents": None, "rules": None,
+                    "list_models": "Agent tool aliases: " + ", ".join(CLAUDE_ALIASES)},
+    "opencode": {"skills": ".opencode/skills", "agents": ".opencode/agents", "rules": "AGENTS.md",
+                 "list_models": "run `opencode models`"},
+    "codex": {"skills": ".agents/skills", "agents": ".codex/agents", "rules": "AGENTS.md",
+              "list_models": None},
+    "cline": {"skills": ".cline/skills", "agents": None, "rules": ".clinerules/dragonhoard.md",
+              "list_models": None},
+    "generic": {"skills": ".agents/skills", "agents": None, "rules": "AGENTS.md", "list_models": None},
+}
 
 DONE_STATUSES = ("DONE", "DONE_OFFLINE")
 TASK_ID = r"M\d+-T\d+[a-z]?"
@@ -76,8 +120,35 @@ def find_project(start: Path) -> Path | None:
 
 
 def load_config(project: Path) -> dict[str, Any]:
-    config: dict[str, Any] = json.loads((project / CONFIG_NAME).read_text())
+    path = project / CONFIG_NAME
+    config: dict[str, Any] = json.loads(path.read_text()) if path.is_file() else {}
+    config.setdefault("host", "claude-code")
+    config.setdefault("models", {})
     return config
+
+
+def save_config(project: Path, config: dict[str, Any]) -> None:
+    (project / CONFIG_NAME).write_text(json.dumps(config, indent=2) + "\n")
+
+
+def role_models(config: dict[str, Any]) -> dict[str, str | None]:
+    """Configured model per role; Claude Code falls back to its tier aliases, others to unset."""
+    claude = config["host"] == "claude-code"
+    return {
+        role: config["models"].get(role) or (spec["default"] if claude else None)
+        for role, spec in ROLES.items()
+    }
+
+
+def skill_ref(host: str, name: str) -> str:
+    return f"/dragonhoard:{name}" if host == "claude-code" else f"dragonhoard-{name}"
+
+
+def agent_name(host: str, role: str) -> str:
+    # Codex names agents by a `name` field; its docs use underscores.
+    return {"claude-code": f"dragonhoard:{role}", "codex": f"dragonhoard_{role}"}.get(
+        host, f"dragonhoard-{role}"
+    )
 
 
 def _cells(line: str) -> list[str]:
@@ -369,8 +440,9 @@ def _fill(text: str, values: dict[str, str]) -> str:
 
 def cmd_init(args: argparse.Namespace) -> int:
     project = Path(args.project).resolve()
-    if (project / CONFIG_NAME).exists():
-        print(f"{CONFIG_NAME} already exists in {project}; refusing to overwrite.")
+    config = load_config(project)  # `install` may have written host (and models) already
+    if config.get("root"):
+        print(f"{CONFIG_NAME} in {project} already has root {config['root']!r}; refusing to overwrite.")
         return 1
     root_name = args.root.strip("/")
     if not root_name or Path(root_name).is_absolute() or ".." in Path(root_name).parts:
@@ -390,9 +462,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(_fill(source.read_text(), values))
     (root / "logs").mkdir(parents=True, exist_ok=True)
-    (project / CONFIG_NAME).write_text(
-        json.dumps({"root": root_name, "checks": checks}, indent=2) + "\n"
-    )
+    save_config(project, {**config, "root": root_name, "checks": checks})
     workspace = Workspace(project)
     append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "init", "summary": f"root {root_name}", "ref": ""})
     workspace.write_lessons()
@@ -474,17 +544,213 @@ def cmd_lesson(workspace: Workspace, args: argparse.Namespace) -> int:
 def cmd_hook(project: Path | None) -> int:
     if project is None:
         return 0  # not a dragonhoard project: stay silent
+    config = load_config(project)
+    host = config["host"]
+    if not config.get("root"):
+        print(f"dragonhoard installed for {host}; run {skill_ref(host, 'init')} to set it up.")
+        return 0
     workspace = Workspace(project)
-    banner = (PLUGIN_ROOT / "assets" / "dragon.txt").read_text().rstrip()
-    print(banner)
-    print(f"\ndragonhoard project. Root: {workspace.config['root']}/. CLI: python3 {Path(__file__).resolve()}")
-    print("Run /dragonhoard:next to work the next task (one task per session).\n")
+    print((PLUGIN_ROOT / "assets" / "dragon.txt").read_text().rstrip())
+    script = Path(__file__).resolve()
+    cli = script.relative_to(project) if script.is_relative_to(project) else script
+    models = ", ".join(f"{r}={m or 'unset'}" for r, m in role_models(config).items())
+    print(f"\ndragonhoard project ({host}). Root: {config['root']}/. CLI: python3 {cli}")
+    print(f"Role models: {models}. Change with {skill_ref(host, 'models')}.")
+    print(f"Run {skill_ref(host, 'next')} to work the next task (one task per session).\n")
     text = workspace.status_text()
     events, ledger = read_jsonl(workspace.events), read_jsonl(workspace.ledger)
     print(render_digest(status_rows(text), gate_rows(text), events, ledger))
     lessons = workspace.root / "LESSONS.md"
     if approved_lessons(ledger) and lessons.is_file():
         print(lessons.read_text())
+    return 0
+
+
+# --- hosts and models --------------------------------------------------------------------
+
+
+def split_frontmatter(text: str) -> tuple[str, str]:
+    match = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
+    return (match.group(1), match.group(2)) if match else ("", text)
+
+
+def frontmatter_description(front: str) -> str:
+    """The `description:` value, folded (`>`) or inline."""
+    match = re.search(r"^description:\s*>?\s*\n((?:[ \t]+.*\n?)+)", front, re.M)
+    if match:
+        return " ".join(line.strip() for line in match.group(1).splitlines()).strip()
+    inline = re.search(r"^description:\s*(.+)$", front, re.M)
+    return inline.group(1).strip() if inline else ""
+
+
+def render_skill(text: str, name: str) -> str:
+    """A plugin skill rewritten for a non-Claude host: prefixed name, vendored CLI path."""
+    text = CLI_REF.sub(f"{VENDOR_DIR}/scripts/dragonhoard.py", text)
+    text = re.sub(r"^name:\s*\S+", f"name: dragonhoard-{name}", text, count=1, flags=re.M)
+    return re.sub(r"dragonhoard:([a-z]+)", r"dragonhoard-\1", text)
+
+
+def render_agent(host: str, role: str, model: str | None, source: str) -> tuple[str, str]:
+    """(relative path, file text) of one role agent for a host with per-agent models."""
+    front, body = split_frontmatter(source)
+    description = frontmatter_description(front)
+    body = body.strip() + "\n"
+    if host == "opencode":
+        permission = "".join(f"  {k}: {v}\n" for k, v in ROLES[role]["permission"].items())
+        model_line = f"model: {json.dumps(model)}\n" if model else ""
+        text = (
+            f"---\ndescription: {json.dumps(description)}\nmode: subagent\n{model_line}"
+            f"permission:\n{permission}---\n\n{body}"
+        )
+        return f"{HOSTS[host]['agents']}/{agent_name(host, role)}.md", text
+    if host == "codex":
+        assert "'''" not in body, "agent body cannot hold a TOML literal-string delimiter"
+        model_line = f"model = {json.dumps(model)}\n" if model else ""
+        text = (
+            f"name = {json.dumps(agent_name(host, role))}\ndescription = {json.dumps(description)}\n"
+            f"{model_line}developer_instructions = '''\n{body}'''\n"
+        )
+        return f"{HOSTS[host]['agents']}/{agent_name(host, role)}.toml", text
+    raise ValueError(f"host {host} has no role agents")
+
+
+def write_agents(project: Path, config: dict[str, Any]) -> list[str]:
+    host = config["host"]
+    if not HOSTS[host]["agents"]:
+        return []
+    written = []
+    for role, model in role_models(config).items():
+        source = (PLUGIN_ROOT / "agents" / f"{role}.md").read_text()
+        relative, text = render_agent(host, role, model, source)
+        (project / relative).parent.mkdir(parents=True, exist_ok=True)
+        (project / relative).write_text(text)
+        written.append(relative)
+    return written
+
+
+def upsert_block(path: Path, block: str) -> None:
+    """Write `block` between the dragonhoard markers; everything outside them is preserved."""
+    wrapped = f"{BLOCK_START}\n{block.strip()}\n{BLOCK_END}"
+    text = path.read_text() if path.is_file() else ""
+    pattern = re.compile(re.escape(BLOCK_START) + r".*?" + re.escape(BLOCK_END), re.S)
+    if pattern.search(text):
+        text = pattern.sub(lambda _: wrapped, text, count=1)
+    else:
+        text = (text.rstrip() + "\n\n" if text.strip() else "") + wrapped
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text.rstrip() + "\n")
+
+
+def rules_block(host: str, skills: list[str]) -> str:
+    agents = HOSTS[host]["agents"]
+    roles = (
+        f"Role subagents: {', '.join('`' + agent_name(host, r) + '`' for r in ROLES)} in `{agents}/`."
+        if agents
+        else "No role subagents on this host: scout and spiker run inline; the judge pauses for a model switch."
+    )
+    return "\n".join([
+        "## dragonhoard",
+        "",
+        "This project is delivered with dragonhoard: plan → explore → verify → build → test → record,",
+        "one task per session.",
+        "",
+        f"- At the start of every session, run `python3 {VENDOR_DIR}/scripts/dragonhoard.py hook` and read",
+        "  its output before anything else.",
+        f"- Skills: {', '.join('`' + s + '`' for s in skills)}.",
+        f"- {roles}",
+        f"- How to run a role here: `python3 {VENDOR_DIR}/scripts/dragonhoard.py role <scout|spiker|judge>`.",
+        "- Generated by `dragonhoard.py install`; edit outside these markers only.",
+    ])
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    host = args.host
+    project = Path(args.project).resolve()
+    if host == "claude-code":
+        print("Claude Code uses the plugin directly: `claude --plugin-dir <dragonhoard>` or /plugin install.")
+        return 1
+    vendor = project / VENDOR_DIR
+    if PLUGIN_ROOT != vendor:  # re-running from the vendored copy must not copy onto itself
+        for name in VENDORED:
+            shutil.copytree(PLUGIN_ROOT / name, vendor / name, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+    config = load_config(project)
+    config["host"] = host
+    save_config(project, config)
+    written = [f"{VENDOR_DIR}/"]
+    skills = []
+    for source in sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md")):
+        name = source.parent.name
+        relative = f"{HOSTS[host]['skills']}/dragonhoard-{name}/SKILL.md"
+        (project / relative).parent.mkdir(parents=True, exist_ok=True)
+        (project / relative).write_text(render_skill(source.read_text(), name))
+        skills.append(f"dragonhoard-{name}")
+        written.append(relative)
+    written += write_agents(project, config)
+    upsert_block(project / HOSTS[host]["rules"], rules_block(host, skills))
+    written.append(HOSTS[host]["rules"])
+    print("\n".join(f"wrote {path}" for path in written))
+    unset = [r for r, m in role_models(config).items() if not m]
+    if unset:
+        print(f"models unset for {', '.join(unset)}: run the dragonhoard-models skill in {host}.")
+    print(f"next: open the project in {host} and run dragonhoard-init.")
+    return 0
+
+
+def cmd_models(project: Path, args: argparse.Namespace) -> int:
+    config = load_config(project)
+    host = config["host"]
+    if args.set:
+        changes = {}
+        for pair in args.set:
+            role, _, model = pair.partition("=")
+            if role not in ROLES or not model.strip():
+                print(f"expected <{'|'.join(ROLES)}>=<model>, got {pair!r}")
+                return 1
+            changes[role] = model.strip()
+            if host == "claude-code" and changes[role] not in CLAUDE_ALIASES:
+                print(f"warning: Claude Code's Agent tool accepts {', '.join(CLAUDE_ALIASES)}; "
+                      f"{changes[role]!r} may be rejected")
+        config["models"] = {**config["models"], **changes}
+        save_config(project, config)
+        for path in write_agents(project, config):
+            print(f"wrote {path}")
+        if config.get("root"):
+            summary = ", ".join(f"{r}={m}" for r, m in changes.items()) + (f": {args.why}" if args.why else "")
+            append_jsonl(project / config["root"] / "logs" / "events.jsonl",
+                         {"ts": now(), "task": "-", "kind": "models.changed", "summary": summary, "ref": CONFIG_NAME})
+    print(f"host: {host}")
+    for role, model in role_models(config).items():
+        spec = ROLES[role]
+        print(f"{role}: {model or 'unset: run the models skill'} | needs: {spec['needs']} | runs: {spec['runs']}")
+    print(f"find available models: {HOSTS[host]['list_models'] or 'ask the owner which models this host can use'}")
+    return 0
+
+
+def cmd_role(project: Path, args: argparse.Namespace) -> int:
+    config = load_config(project)
+    host, role = config["host"], args.role
+    model = role_models(config)[role]
+    name = agent_name(host, role)
+    worktree = ("one git worktree per option: `git worktree add ../<repo>-spike-<option> -b spike/<option>`; "
+                "the spike works only there and is never merged")
+    if host == "claude-code":
+        extra = ', isolation: "worktree"' if role == "spiker" else ""
+        print(f"Spawn subagent_type `{name}` with model `{model}`{extra}. Put several in one message to run them in parallel.")
+    elif HOSTS[host]["agents"]:
+        print(f"Invoke the subagent `{name}` (defined in {HOSTS[host]['agents']}/).")
+        print(f"Its model: {model or 'unset, so it inherits the session model; run the models skill first'}.")
+        if role == "spiker":
+            print(f"Before invoking, create {worktree}. Pass that path to the subagent.")
+    elif role == "judge":
+        print(f"PAUSE. This host cannot run the judge on its own model. Ask the owner to switch this session "
+              f"to `{model or 'a frontier model (none configured: run the models skill)'}` "
+              f"(judge needs: {ROLES[role]['needs']}). Wait for their confirmation, then judge.")
+    elif role == "spiker":
+        print(f"Run inline in this session, one option at a time, in {worktree}.")
+    else:
+        print("Run inline in this session: read-only retrieval with sources; no edits.")
+    print(f"Journal: record `role {role} ran on <model> via <how>`.")
     return 0
 
 
@@ -504,6 +770,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("digest")
     sub.add_parser("check")
     sub.add_parser("hook")
+    install = sub.add_parser("install")
+    install.add_argument("--host", required=True, choices=sorted(HOSTS))
+    models = sub.add_parser("models")
+    models.add_argument("--set", nargs="+", metavar="ROLE=MODEL")
+    models.add_argument("--why", default="")
+    sub.add_parser("role").add_argument("role", choices=list(ROLES))
     lesson = sub.add_parser("lesson")
     actions = lesson.add_subparsers(dest="action", required=True)
     actions.add_parser("screen").add_argument("--file")
@@ -522,11 +794,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "init":
         return cmd_init(args)
+    if args.command == "install":
+        return cmd_install(args)
     project = find_project(Path(args.project).resolve())
     if args.command == "hook":
         return cmd_hook(project)
     if project is None:
-        print(f"no {CONFIG_NAME} found; run /dragonhoard:init first")
+        print(f"no {CONFIG_NAME} found; run the dragonhoard init skill first")
+        return 1
+    if args.command in ("models", "role"):
+        return (cmd_models if args.command == "models" else cmd_role)(project, args)
+    if not load_config(project).get("root"):
+        print(f"{CONFIG_NAME} has no root yet; run the dragonhoard init skill first")
         return 1
     workspace = Workspace(project)
     if args.command == "digest":

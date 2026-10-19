@@ -47,18 +47,38 @@ Flow:
    `{{date}}`.
 2. `shape` fills the skeletons per milestone.
 3. `next` runs the loop.
-4. `explore` fans out the agents.
+4. `explore` fans out the roles.
 5. `learn` gates lessons.
+6. `models` has the current model suggest a model per role; the owner confirms.
 
-Agents (`agents/*.md`) are pinned to models by owner decision:
-- `scout` runs on haiku and does read-only retrieval.
-- `spiker` runs on sonnet, one per option, launched with `isolation: "worktree"`.
-- `judge` runs on opus. It advises only: it can add warnings, but it can never clear a screen
-  failure or approve.
+**Roles** (`ROLES` in the script; bodies in `agents/*.md`):
+- `scout` does read-only retrieval.
+- `spiker` builds one throwaway prototype per option, in an isolated worktree.
+- `judge` advises only: it can add warnings, but it can never clear a screen failure or approve.
 
-The `SessionStart` hook is in `.claude-plugin/plugin.json` and runs `dragonhoard.py hook`. It
-prints the banner, the next task and the digest, and stays silent when `dragonhoard.json` is
-absent. It renders without writing files, so a session start never dirties git.
+Models are per role in `dragonhoard.json` `models`. The frontmatter `model:` in `agents/*.md` is
+only the Claude Code default (haiku/sonnet/opus tier aliases). Never hardcode concrete model
+names anywhere else.
+
+**Multi-host.** Claude Code uses the plugin directly. For OpenCode, Codex, Cline and generic
+`AGENTS.md` agents, `dragonhoard.py install --host <h>`:
+- copies `scripts/`, `templates/`, `assets/`, `skills/` and `agents/` to `<project>/.dragonhoard/`;
+- renders skills as `dragonhoard-<name>`, with `${CLAUDE_PLUGIN_ROOT}` paths rewritten to the
+  copied CLI;
+- renders role agents (OpenCode md, Codex TOML) with the configured models;
+- upserts a marker block into the host rules file.
+
+**All host differences live in `HOSTS` and `cmd_role`.** Skills stay host-neutral: they say
+"ask the owner and wait (Claude Code: AskUserQuestion)" and "follow `dragonhoard.py role <r>`".
+On hosts without per-agent models, the judge pauses so the owner can switch models (owner
+decision). Host facts and their sources are in `docs/hosts.md`; update it whenever `HOSTS`
+changes.
+
+The `SessionStart` hook (Claude Code) is in `.claude-plugin/plugin.json` and runs
+`dragonhoard.py hook`. Other hosts get the same output through the `AGENTS.md` block
+instruction. The hook prints the banner, the role models, the next task and the digest, and
+stays silent when `dragonhoard.json` is absent. It renders without writing files, so a session
+start never dirties git.
 
 ## Invariants to keep
 
@@ -72,8 +92,14 @@ absent. It renders without writing files, so a session start never dirties git.
   templates would pollute `check`.
 - `lesson approve` re-screens the text and refuses on any violation. Secret matches are masked
   in screen output and redacted in the ledger.
-- `init` never overwrites `dragonhoard.json` or any existing file, and rejects absolute or `..` roots.
+- `init` refuses once `dragonhoard.json` has a `root` (it keeps `host` and `models` written by
+  `install`). It never overwrites an existing file, and it rejects absolute or `..` roots.
+- `install` is idempotent. It touches only `.dragonhoard/`, its own `dragonhoard-*` skill and
+  agent files, and the text between `<!-- dragonhoard:start -->` and `<!-- dragonhoard:end -->`.
 - Owner decisions:
   - the root folder is always asked, never assumed (offer `implementation/` or `improvement/`);
-  - every lesson needs human approval after the opus judge;
-  - exploration uses parallel subagents, with the cheaper model for retrieval.
+  - every lesson needs human approval after the judge, which should run on the strongest model;
+  - exploration uses parallel subagents, with the cheaper model for retrieval;
+  - models are configurable per role: the current model suggests, the owner confirms;
+  - on hosts without per-agent models, the judge pauses for a model switch rather than running
+    on a weaker model.

@@ -130,9 +130,84 @@ def test_end_to_end(tmp: Path) -> None:
     assert lines[-1].endswith("attempt: s")  # and the newest events are the ones kept
 
 
+def test_hosts(tmp: Path) -> None:
+    import subprocess
+    import tomllib
+
+    assert run("--project", str(tmp), "install", "--host", "claude-code")[0] == 1  # plugin, not install
+
+    # opencode: skills, role agents, AGENTS.md block next to the owner's own text
+    oc = tmp / "oc"
+    oc.mkdir()
+    (oc / "AGENTS.md").write_text("# My rules\nkeep me\n")
+    assert run("--project", str(oc), "install", "--host", "opencode")[0] == 0
+    skill = (oc / ".opencode/skills/dragonhoard-next/SKILL.md").read_text()
+    assert "name: dragonhoard-next" in skill and ".dragonhoard/scripts/dragonhoard.py" in skill
+    assert "CLAUDE_PLUGIN_ROOT" not in skill and "dragonhoard:" not in skill
+    judge = (oc / ".opencode/agents/dragonhoard-judge.md").read_text()
+    assert "mode: subagent" in judge and "edit: deny" in judge and "model:" not in judge  # unset
+    assert (oc / ".dragonhoard/scripts/dragonhoard.py").is_file()
+    assert run("--project", str(oc), "install", "--host", "opencode")[0] == 0  # idempotent
+    agents_md = (oc / "AGENTS.md").read_text()
+    assert agents_md.count(dragonhoard.BLOCK_START) == 1 and "keep me" in agents_md
+    assert "run dragonhoard-init" in run("--project", str(oc), "hook")[1]
+    out = run("--project", str(oc), "role", "judge")[1]
+    assert "`dragonhoard-judge`" in out and "unset" in out
+    assert run("--project", str(oc), "models", "--set", "judge=anthropic/big", "--why", "deep")[0] == 0
+    assert 'model: "anthropic/big"' in (oc / ".opencode/agents/dragonhoard-judge.md").read_text()
+    assert run("--project", str(oc), "models", "--set", "nobody=x")[0] == 1
+    assert run("--project", str(oc), "init", "--root", "implementation")[0] == 0  # keeps host + models
+    config = json.loads((oc / "dragonhoard.json").read_text())
+    assert config["host"] == "opencode" and config["models"]["judge"] == "anthropic/big"
+    run("--project", str(oc), "models", "--set", "scout=anthropic/small", "--why", "cheap retrieval")
+    events = (oc / "implementation/logs/events.jsonl").read_text()
+    assert "models.changed" in events and "cheap retrieval" in events
+    assert "scout=anthropic/small" in run("--project", str(oc), "hook")[1]
+
+    # the vendored copy runs on its own, and can reinstall from itself
+    cli = oc / ".dragonhoard/scripts/dragonhoard.py"
+    done = subprocess.run([sys.executable, str(cli), "--project", str(oc), "role", "scout"],
+                          capture_output=True, text=True)
+    assert done.returncode == 0 and "dragonhoard-scout" in done.stdout
+    done = subprocess.run([sys.executable, str(cli), "--project", str(oc), "install", "--host", "opencode"],
+                          capture_output=True, text=True)
+    assert done.returncode == 0, done.stdout + done.stderr
+
+    # codex: TOML agents parse, underscore names, model lands after --set
+    cx = tmp / "cx"
+    cx.mkdir()
+    run("--project", str(cx), "install", "--host", "codex")
+    run("--project", str(cx), "models", "--set", "spiker=mid-model")
+    agent = tomllib.loads((cx / ".codex/agents/dragonhoard_spiker.toml").read_text())
+    assert agent["name"] == "dragonhoard_spiker" and agent["model"] == "mid-model"
+    assert "evidence" in agent["developer_instructions"] and agent["description"]
+    assert (cx / ".agents/skills/dragonhoard-learn/SKILL.md").is_file()
+
+    # cline and generic: no role agents; the judge pauses, the spiker gets a worktree
+    for host, skills_dir, rules in (("cline", ".cline/skills", ".clinerules/dragonhoard.md"),
+                                    ("generic", ".agents/skills", "AGENTS.md")):
+        folder = tmp / host
+        folder.mkdir()
+        run("--project", str(folder), "install", "--host", host)
+        assert (folder / skills_dir / "dragonhoard-models/SKILL.md").is_file()
+        assert "no role subagents" in (folder / rules).read_text().lower()
+        assert run("--project", str(folder), "role", "judge")[1].startswith("PAUSE")
+        assert "git worktree add" in run("--project", str(folder), "role", "spiker")[1]
+
+    # claude-code keeps its tier aliases and warns on anything else
+    cc = tmp / "cc"
+    cc.mkdir()
+    run("--project", str(cc), "init", "--root", "implementation")
+    assert "model `opus`" in run("--project", str(cc), "role", "judge")[1]
+    assert 'isolation: "worktree"' in run("--project", str(cc), "role", "spiker")[1]
+    assert "warning" in run("--project", str(cc), "models", "--set", "judge=some-other-model")[1]
+
+
 if __name__ == "__main__":
     test_tables_and_next()
     test_screen()
+    with tempfile.TemporaryDirectory() as folder:
+        test_hosts(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
         test_mismatch_and_missing(Path(folder))
     with tempfile.TemporaryDirectory() as folder:

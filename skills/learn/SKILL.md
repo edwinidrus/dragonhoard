@@ -61,8 +61,10 @@ You may draft a new wording; it goes through the screen again.
 
 ## 3. Judge (frontier model)
 
-Spawn `dragonhoard:judge` (Job 2) with the screened candidates, their provenance, and the paths of
-the journal attempts they cite, plus `<root>/LESSONS.md`. The judge checks each one: faithful to
+Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, ask the owner to
+switch models first. Give the judge (Job 2 in its instructions) the screened candidates, their
+provenance, the paths of the journal attempts they cite, and `<root>/LESSONS.md`. The judge
+checks each one: faithful to
 the evidence, general, not a duplicate, risk. It can add warnings. It cannot pass a candidate
 that failed the screen.
 
@@ -70,11 +72,12 @@ Drop any candidate the judge marks "do not recommend", unless the owner asks to 
 
 ## 4. Owner decides
 
-For each remaining candidate, use AskUserQuestion. Show the text, provenance, screen result and
-the judge's verdict and warnings. The options are:
+For each remaining candidate, ask the owner and wait for the answer (in Claude Code, use
+AskUserQuestion). Show the text, provenance, screen result and the judge's verdict and warnings.
+The options are:
 - **Approve.**
 - **Reject.**
-- **Edit**, via "Other". Edited text goes back to step 2 for screening.
+- **Edit**: the owner gives new text. Edited text goes back to step 2 for screening.
 
 ## 5. Record
 
@@ -86,3 +89,7 @@ dragonhoard.py lesson reject  --text "<text>" --provenance "<prov>" --judge "<ve
 `approve` re-runs the screen and refuses on any violation. It then rebuilds `LESSONS.md` and
 `DIGEST.md`. Report the lesson IDs approved and rejected. Lessons take effect from the **next**
 task.
+
+If the harvest shows a role struggling, offer `/dragonhoard:models` to re-tune it. Examples:
+spikes ending `INCONCLUSIVE`, scouts returning `not found` for facts that existed, or judge
+verdicts that later proved wrong.
