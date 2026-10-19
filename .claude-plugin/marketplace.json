@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dragonhoard",
+  "description": "dragonhoard planning harness for Claude Code.",
+  "owner": {
+    "name": "edwinidrus"
+  },
+  "plugins": [
+    {
+      "name": "dragonhoard",
+      "description": "Plan into milestones and task packs, one task per session, logs as memory, gated lessons.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

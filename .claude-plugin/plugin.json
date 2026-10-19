@@ -1,0 +1,23 @@
+{
+  "name": "dragonhoard",
+  "version": "0.1.0",
+  "description": "Planning harness for coding agents: turns a plan into milestones and self-contained task packs, runs one task per session through plan-explore-verify-build-test-record, keeps append-only logs as memory, and learns gated lessons along the journey.",
+  "author": {
+    "name": "edwinidrus"
+  },
+  "license": "MIT",
+  "keywords": ["planning", "harness", "milestones", "task-packs", "memory", "learning"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py\" --project \"${CLAUDE_PROJECT_DIR:-.}\" hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
