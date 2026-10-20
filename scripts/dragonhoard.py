@@ -770,9 +770,11 @@ def write_opencode_config(project: Path, config: dict[str, Any], mcp_off: list[s
         "skill": {"*": "deny", "dragonhoard-*": "allow", **{s: "allow" for s in DISCIPLINE_SKILLS}},
         "task": {"*": "deny", "dragonhoard-*": "allow"},
     }
+    servers = data.setdefault("mcp", {}) if mcp_off else {}
     for name in mcp_off:
         # OpenCode 2.x silently drops a partial entry, so an override needs a type and a command.
-        data.setdefault("mcp", {}).setdefault(name, {"type": "local", "command": ["true"]})["enabled"] = False
+        entry = servers.get(name, {})
+        servers[name] = {**(entry if "type" in entry else {"type": "local", "command": ["true"]}), "enabled": False}
     path.write_text(json.dumps(data, indent=2) + "\n")
 
 

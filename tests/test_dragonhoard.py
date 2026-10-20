@@ -234,12 +234,13 @@ def test_hybrid(tmp: Path) -> None:
     pause = run("--project", str(tmp), "role", "judge")[1]
     assert pause.startswith("PAUSE") and "status JUDGE" in pause
     assert "delegate" in run("--project", str(tmp), "role", "builder")[1]
+    (tmp / "opencode.json").write_text('{"mcp": {"obsidian": {"enabled": false}}, "plugin": ["p.mjs"]}')
     assert run("--project", str(tmp), "install", "--host", "opencode", "--mcp-off", "obsidian,exa")[0] == 0
     oc = json.loads((tmp / "opencode.json").read_text())
     assert oc["permission"]["bash"]["git commit*"] == "deny" and oc["permission"]["question"] == "deny"
     assert oc["permission"]["skill"]["*"] == "deny" and oc["permission"]["skill"]["dragonhoard-*"] == "allow"
     assert oc["mcp"]["obsidian"] == {"type": "local", "command": ["true"], "enabled": False}  # full entry
-    assert set(oc["mcp"]) == {"obsidian", "exa"}
+    assert set(oc["mcp"]) == {"obsidian", "exa"} and oc["plugin"] == ["p.mjs"]  # partial entry repaired, other keys kept
     assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
     assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
