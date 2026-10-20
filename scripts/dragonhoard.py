@@ -1002,6 +1002,8 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
         return 1
     folder = workspace.root / "logs" / "sessions"
     folder.mkdir(parents=True, exist_ok=True)
+    if not (folder / ".gitignore").exists():  # raw transcripts can hold command output: keep them local
+        (folder / ".gitignore").write_text("*\n")
     session, prompt, started = args.session, args.prompt, time.time()
     totals = {"steps": 0, "input": 0, "output": 0, "cache": 0, "cost": 0.0}
     handoff, text = None, ""

@@ -293,6 +293,7 @@ def test_hybrid(tmp: Path) -> None:
     assert "-s" not in calls[1] and "-s ses_stub1234" in calls[2] and "no HANDOFF" in calls[2], calls
     assert "opencode/free-x" in calls[0] and "/dragonhoard-next" in calls[0]
     assert len(list((tmp / "impl/logs/sessions").glob("*.jsonl"))) >= 2
+    assert (tmp / "impl/logs/sessions/.gitignore").read_text() == "*\n"
     (stub_dir / "script.txt").write_text("nohandoff")
     code, out = run("--project", str(tmp), "delegate", "x", "--opencode", str(stub), "--retries", "1", "--backoff", "0")
     assert code == 1 and "no valid HANDOFF" in out and "built it" in out
