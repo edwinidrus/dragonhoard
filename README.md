@@ -8,11 +8,50 @@
       /|  |\
 ```
 
-A Claude Code plugin that turns your plan into a delivery system. It breaks the plan into
-milestones and self-contained task packs, so the agent only loads the context one task needs.
-Each session works one task through **plan → explore → verify → build → test → record**.
-Append-only logs act as memory across the whole journey. Lessons you approve carry forward to
-later tasks.
+**A coding agent that gets better at your project with every task, and never changes how it
+works without your sign-off.**
+
+Self-improving agents are everywhere; most let the model rewrite its own rules. dragonhoard
+learns too, but every lesson passes a deterministic screen, a frontier-model judge and **your
+approval** before any later task uses it.
+
+- **Learns, gated.** Failures and fixes become lessons; nothing is approved automatically.
+- **One task, small context.** Your plan becomes milestones and self-contained task packs; the
+  agent loads one pack, not the whole repo.
+- **Evidence, not claims.** Failing test first, real command output in the journal, and `check`
+  must PASS before a task counts as done.
+- **Memory across sessions.** Append-only logs and a generated digest let a fresh session pick
+  up where the last one stopped.
+- **Frontier judge, cheap builder (optional).** Hybrid mode lets a free OpenCode model build
+  while Claude Code judges and re-verifies every result.
+
+Runs as a Claude Code plugin, and in OpenCode, Codex CLI, Cline or any agent that reads
+`AGENTS.md`.
+
+## How one task runs
+
+Each session works exactly one task through **plan → explore → verify → build → test → record**,
+then stops.
+
+```mermaid
+flowchart LR
+  P["plan<br/>restate goal + acceptance"] --> E["explore<br/>only if unknowns"]
+  E --> V["verify<br/>interfaces exist,<br/>failing test first"]
+  V --> B["build<br/>smallest change,<br/>pack files only"]
+  B --> T["test<br/>focused test + all checks"]
+  T --> R["record<br/>journal, STATUS, logs"]
+  T -- "2 failed tries" --> X["BLOCKED<br/>reason + owner action"]
+  R -. "approved lessons" .-> P
+```
+
+| Step | What you get |
+|---|---|
+| plan | A wrong or stale pack stops the task instead of being quietly rewritten, so scope never drifts. |
+| explore | Cheap parallel scouts for facts, spikes in isolated worktrees for open choices. Each choice is logged once and not argued again. |
+| verify | No building on interfaces that don't exist or on a build that is already red. The test fails first, for the expected reason. |
+| build | The diff stays inside the pack's file list: small, reviewable changes. |
+| test | Two failed attempts at the same issue mean BLOCKED: no endless retry loop, no fake DONE. |
+| record | Journal, `events.jsonl` and `DIGEST.md` let the next session start cold with full memory, and let you audit every claim. |
 
 ## Modes
 
@@ -61,6 +100,20 @@ markers is never touched.
 Details and sources: [docs/hosts.md](docs/hosts.md).
 
 ## Use
+
+```mermaid
+flowchart LR
+  I["/dragonhoard:init<br/>root, checks, mode"] --> S["/dragonhoard:shape plan.md<br/>milestones + task packs"]
+  S --> N["/dragonhoard:next<br/>one task per session,<br/>repeat"]
+  N -- "milestone done" --> S2["/dragonhoard:shape M2<br/>next milestone's packs"]
+  S2 --> N
+  N -. "open choice" .-> X["/dragonhoard:explore<br/>spikes + judge, you pick"]
+  N -. "after a task or gate" .-> L["/dragonhoard:learn<br/>screen, judge, you approve"]
+  L -. "lessons" .-> N
+  M["/dragonhoard:models<br/>any time: model per role"]
+```
+
+In hybrid mode, `/dragonhoard:conduct` runs the same loop and a headless OpenCode session builds.
 
 | Command | What it does |
 |---|---|

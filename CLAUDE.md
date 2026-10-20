@@ -22,10 +22,20 @@ domain articles (Hermes, SQLite, Phoenix and the rest).
 python3 tests/test_dragonhoard.py       # the only test: assert-based self-check, prints "ok"
 claude plugin validate .                # manifest check (the CLAUDE.md-at-root warning is expected)
 claude --plugin-dir .                   # load the plugin for one session, e.g. from a scratch project
-python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | check | hook | lesson | mode | delegate | verify
+python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | check | hook | install | mode | delegate | verify | models | role | lesson
+python3 -c 'import sys; sys.path.insert(0, "tests"); import test_dragonhoard as t; t.test_screen()'   # one test
 ```
 
 There is no lint config and no dependencies. `scripts/dragonhoard.py` must stay stdlib-only.
+There is no test runner: the test functions are called by hand from the `__main__` block, so a
+new `test_*` function runs only after you add it there. The CLI takes `--project <dir>` and
+searches upward from it for `dragonhoard.json`.
+
+`evals/kart-racer/` is an independent reliability trial, not part of the plugin, and `install`
+does not copy it. It audits a frozen v0.2 snapshot that builds a game in a separate repo
+(`scorecard.md` has the thresholds, which are never relaxed to get a pass). `audit.py` imports
+`dragonhoard.py` (`status_rows`, `DONE_STATUSES`, `weakened_tests` and others), so renaming
+those breaks it. `audit.py --self-check` and `gate.py --self-check` check the kit itself.
 
 ## Architecture
 
