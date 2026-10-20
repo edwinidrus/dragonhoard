@@ -160,5 +160,3 @@ judge step pauses and asks you to switch the session to the judge model.
 
 Every lesson passes four gates: deterministic screen → judge → **your approval** → used from
 the next task on. Nothing is approved automatically.
-
-The design comes from the hand-built EpisAlpha `implementation/` workspace, generalized.
