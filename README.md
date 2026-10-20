@@ -14,6 +14,15 @@ Each session works one task through **plan → explore → verify → build → 
 Append-only logs act as memory across the whole journey. Lessons you approve carry forward to
 later tasks.
 
+## Modes
+
+`/dragonhoard:init` asks which of two delivery modes to use:
+- **Full Claude Code** (`solo`): this session builds; scout, spiker and judge are Claude subagents.
+- **Claude Code + OpenCode** (`hybrid`): Claude Code orchestrates, judges and verifies with
+  `/dragonhoard:conduct`; a headless OpenCode session builds each task on a cheaper or free model.
+
+Trade-offs, setup and measured costs: [docs/modes.md](docs/modes.md).
+
 ## Install
 
 Requires `python3` (stdlib only).
@@ -61,6 +70,7 @@ Details and sources: [docs/hosts.md](docs/hosts.md).
 | `/dragonhoard:explore` | For an open choice: cheap parallel retrieval, up to 3 parallel spikes in isolated worktrees, a comparison by a frontier model. You pick; the decision is logged. |
 | `/dragonhoard:learn` | Drafts lessons from journals, screens them deterministically, has the judge review them, then asks you to approve each. `revoke L<nn>` removes one. |
 | `/dragonhoard:models` | The current model suggests which model fits each role, using the host's model list and the journey's evidence; you confirm. |
+| `/dragonhoard:conduct` | Hybrid mode only. Delegates each task to the OpenCode builder, judges its requests, verifies every result (`dragonhoard.py verify`), escalates repeated failures, and runs gates. |
 
 On other hosts the commands are the skills `dragonhoard-init`, `dragonhoard-next`, and so on.
 

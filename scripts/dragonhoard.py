@@ -5,7 +5,7 @@ The skills do the reasoning; this script owns everything that must not drift:
 which task is next, the append-only logs, the memory digest, STATUS/PROGRESS consistency,
 and the lesson screen and ledger.
 
-    dragonhoard.py init --root implementation --check "pytest -q"
+    dragonhoard.py init --root implementation --check "pytest -q" [--mode solo|hybrid]
     dragonhoard.py next
     dragonhoard.py log M1-T01 option.chosen "picked sqlite over json" --ref journal#2
     dragonhoard.py digest
@@ -17,6 +17,10 @@ and the lesson screen and ledger.
     dragonhoard.py models [--set judge=<model> --why "..."]
     dragonhoard.py role judge                 # how to run a role on this host
     dragonhoard.py install --host opencode    # non-Claude hosts: vendor CLI, skills, agents, rules
+    dragonhoard.py mode hybrid --why "..."    # solo: one host does everything; hybrid: Claude Code
+                                              # orchestrates, OpenCode builds
+    dragonhoard.py delegate "<prompt>" [--session <id>]   # hybrid: one OpenCode builder turn
+    dragonhoard.py verify M1-T01 [--base HEAD]            # independent re-check of a task
 
 stdlib only. It never edits source or tests and never reads `.env`.
 """
@@ -25,9 +29,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import selectors
 import shutil
+import subprocess
 import sys
+import time
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,6 +48,9 @@ VENDOR_DIR = ".dragonhoard"
 VENDORED = ("scripts", "templates", "assets", "skills", "agents")
 CLI_REF = re.compile(r'"?\$\{CLAUDE_PLUGIN_ROOT\}/scripts/dragonhoard\.py"?')
 BLOCK_START, BLOCK_END = "<!-- dragonhoard:start -->", "<!-- dragonhoard:end -->"
+MODES = ("solo", "hybrid")  # solo: one host does everything; hybrid: Claude Code orchestrates, OpenCode builds
+EXTERNAL = "external"  # a role answered by the orchestrating session, not by a host model
+ORCHESTRATOR_SKILLS = ("conduct",)
 
 # What each role needs. Requirements only, never model names: the current model suggests
 # concrete models (skills/models). Defaults are Claude Code tier aliases, used only there.
@@ -61,6 +72,12 @@ ROLES: dict[str, dict[str, Any]] = {
         "runs": "rarely: option comparison and lesson review",
         "default": "opus",
         "permission": {"edit": "deny", "bash": "deny", "webfetch": "deny"},
+    },
+    "builder": {  # hybrid only: the OpenCode main session itself, never a subagent
+        "needs": "solid coding and test running at the lowest cost; follows a skill step by step",
+        "runs": "one headless session per task, started by the orchestrator",
+        "default": None,
+        "permission": {},
     },
 }
 CLAUDE_ALIASES = ("haiku", "sonnet", "opus", "fable")  # values the Agent tool's `model` accepts
@@ -123,6 +140,7 @@ def load_config(project: Path) -> dict[str, Any]:
     path = project / CONFIG_NAME
     config: dict[str, Any] = json.loads(path.read_text()) if path.is_file() else {}
     config.setdefault("host", "claude-code")
+    config.setdefault("mode", "solo")
     config.setdefault("models", {})
     return config
 
@@ -132,11 +150,15 @@ def save_config(project: Path, config: dict[str, Any]) -> None:
 
 
 def role_models(config: dict[str, Any]) -> dict[str, str | None]:
-    """Configured model per role; Claude Code falls back to its tier aliases, others to unset."""
+    """Configured model per role; Claude Code falls back to its tier aliases, others to unset.
+    Hybrid adds the builder role and answers the judge in the orchestrating session."""
     claude = config["host"] == "claude-code"
+    hybrid = config.get("mode") == "hybrid"
     return {
-        role: config["models"].get(role) or (spec["default"] if claude else None)
+        role: config["models"].get(role) or (EXTERNAL if hybrid and role == "judge" else None)
+        or (spec["default"] if claude else None)
         for role, spec in ROLES.items()
+        if role != "builder" or hybrid
     }
 
 
@@ -462,9 +484,10 @@ def cmd_init(args: argparse.Namespace) -> int:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(_fill(source.read_text(), values))
     (root / "logs").mkdir(parents=True, exist_ok=True)
-    save_config(project, {**config, "root": root_name, "checks": checks})
+    mode = args.mode or config.get("mode", "solo")
+    save_config(project, {**config, "mode": mode, "root": root_name, "checks": checks})
     workspace = Workspace(project)
-    append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "init", "summary": f"root {root_name}", "ref": ""})
+    append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "init", "summary": f"root {root_name}, mode {mode}", "ref": ""})
     workspace.write_lessons()
     workspace.write_digest()
     print((PLUGIN_ROOT / "assets" / "dragon.txt").read_text())
@@ -554,9 +577,15 @@ def cmd_hook(project: Path | None) -> int:
     script = Path(__file__).resolve()
     cli = script.relative_to(project) if script.is_relative_to(project) else script
     models = ", ".join(f"{r}={m or 'unset'}" for r, m in role_models(config).items())
-    print(f"\ndragonhoard project ({host}). Root: {config['root']}/. CLI: python3 {cli}")
+    print(f"\ndragonhoard project ({host}, mode {config['mode']}). Root: {config['root']}/. CLI: python3 {cli}")
     print(f"Role models: {models}. Change with {skill_ref(host, 'models')}.")
-    print(f"Run {skill_ref(host, 'next')} to work the next task (one task per session).\n")
+    if config["mode"] != "hybrid":
+        print(f"Run {skill_ref(host, 'next')} to work the next task (one task per session).\n")
+    elif script.is_relative_to(project):  # the vendored CLI: an OpenCode builder session
+        print("Mode hybrid: you are the builder. Follow the skill your prompt names, end with the HANDOFF block.\n")
+    else:
+        print("Mode hybrid: you are the orchestrator. Run /dragonhoard:conduct; it delegates each task to "
+              "OpenCode and verifies the result. Never read builder transcripts unless debugging.\n")
     text = workspace.status_text()
     events, ledger = read_jsonl(workspace.events), read_jsonl(workspace.ledger)
     print(render_digest(status_rows(text), gate_rows(text), events, ledger))
@@ -620,6 +649,8 @@ def write_agents(project: Path, config: dict[str, Any]) -> list[str]:
         return []
     written = []
     for role, model in role_models(config).items():
+        if role == "builder" or model == EXTERNAL:
+            continue
         source = (PLUGIN_ROOT / "agents" / f"{role}.md").read_text()
         relative, text = render_agent(host, role, model, source)
         (project / relative).parent.mkdir(parents=True, exist_ok=True)
@@ -641,13 +672,19 @@ def upsert_block(path: Path, block: str) -> None:
     path.write_text(text.rstrip() + "\n")
 
 
-def rules_block(host: str, skills: list[str]) -> str:
+def rules_block(host: str, skills: list[str], config: dict[str, Any]) -> str:
     agents = HOSTS[host]["agents"]
+    subagents = [r for r, m in role_models(config).items() if r != "builder" and m != EXTERNAL]
     roles = (
-        f"Role subagents: {', '.join('`' + agent_name(host, r) + '`' for r in ROLES)} in `{agents}/`."
+        f"Role subagents: {', '.join('`' + agent_name(host, r) + '`' for r in subagents)} in `{agents}/`."
         if agents
         else "No role subagents on this host: scout and spiker run inline; the judge pauses for a model switch."
     )
+    hybrid = [
+        "- Mode hybrid: you are the builder, run headless by an orchestrating Claude Code session.",
+        "  Nobody can answer you mid-turn: never use an interactive question tool. Put owner questions",
+        "  and judge requests in the HANDOFF block your prompt asks for, then stop.",
+    ] if config.get("mode") == "hybrid" else []
     return "\n".join([
         "## dragonhoard",
         "",
@@ -659,6 +696,10 @@ def rules_block(host: str, skills: list[str]) -> str:
         f"- Skills: {', '.join('`' + s + '`' for s in skills)}.",
         f"- {roles}",
         f"- How to run a role here: `python3 {VENDOR_DIR}/scripts/dragonhoard.py role <scout|spiker|judge>`.",
+        *hybrid,
+        "- If superpowers is installed, use only its discipline skills (test-driven-development,",
+        "  systematic-debugging, verification-before-completion, receiving-code-review). Its planning,",
+        "  execution and branch skills duplicate shape/next/explore and commit, which is the owner's job.",
         "- Generated by `dragonhoard.py install`; edit outside these markers only.",
     ])
 
@@ -681,20 +722,54 @@ def cmd_install(args: argparse.Namespace) -> int:
     skills = []
     for source in sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md")):
         name = source.parent.name
+        if name in ORCHESTRATOR_SKILLS:
+            continue  # runs in the orchestrating Claude Code session, never in the builder
         relative = f"{HOSTS[host]['skills']}/dragonhoard-{name}/SKILL.md"
         (project / relative).parent.mkdir(parents=True, exist_ok=True)
         (project / relative).write_text(render_skill(source.read_text(), name))
         skills.append(f"dragonhoard-{name}")
         written.append(relative)
     written += write_agents(project, config)
-    upsert_block(project / HOSTS[host]["rules"], rules_block(host, skills))
+    upsert_block(project / HOSTS[host]["rules"], rules_block(host, skills, config))
     written.append(HOSTS[host]["rules"])
+    if host == "opencode" and config["mode"] == "hybrid":
+        write_opencode_config(project, config, args.mcp_off or [])
+        written.append("opencode.json")
     print("\n".join(f"wrote {path}" for path in written))
     unset = [r for r, m in role_models(config).items() if not m]
     if unset:
-        print(f"models unset for {', '.join(unset)}: run the dragonhoard-models skill in {host}.")
-    print(f"next: open the project in {host} and run dragonhoard-init.")
+        print(f"models unset for {', '.join(unset)}: run the models skill.")
+    if config["mode"] == "hybrid":
+        print("next: in Claude Code, run /dragonhoard:conduct; it delegates each task to OpenCode.")
+    else:
+        print(f"next: open the project in {host} and run dragonhoard-init.")
     return 0
+
+
+# Headless builders cannot answer an "ask" prompt (the run hangs), so every rule is allow or deny.
+DENIED_COMMANDS = ("git commit", "git push", "git reset", "git checkout", "git rebase", "git clean", "rm -rf")
+DISCIPLINE_SKILLS = ("test-driven-development", "systematic-debugging", "verification-before-completion",
+                     "receiving-code-review")
+
+
+def write_opencode_config(project: Path, config: dict[str, Any], mcp_off: list[str]) -> None:
+    """Merge the hybrid builder's model and permissions into the project opencode.json."""
+    path = project / "opencode.json"
+    data = json.loads(path.read_text()) if path.is_file() else {"$schema": "https://opencode.ai/config.json"}
+    builder = role_models(config).get("builder")
+    if builder:
+        data["model"] = builder
+    data["permission"] = {
+        "edit": "allow",
+        "question": "deny",
+        "external_directory": "deny",
+        "bash": {"*": "allow", **{f"{command}*": "deny" for command in DENIED_COMMANDS}},
+        "skill": {"*": "deny", "dragonhoard-*": "allow", **{s: "allow" for s in DISCIPLINE_SKILLS}},
+        "task": {"*": "deny", "dragonhoard-*": "allow"},
+    }
+    for name in mcp_off:
+        data.setdefault("mcp", {}).setdefault(name, {})["enabled"] = False
+    path.write_text(json.dumps(data, indent=2) + "\n")
 
 
 def cmd_models(project: Path, args: argparse.Namespace) -> int:
@@ -715,11 +790,14 @@ def cmd_models(project: Path, args: argparse.Namespace) -> int:
         save_config(project, config)
         for path in write_agents(project, config):
             print(f"wrote {path}")
+        if host == "opencode" and config["mode"] == "hybrid" and (project / "opencode.json").is_file():
+            write_opencode_config(project, config, [])
+            print("wrote opencode.json")
         if config.get("root"):
             summary = ", ".join(f"{r}={m}" for r, m in changes.items()) + (f": {args.why}" if args.why else "")
             append_jsonl(project / config["root"] / "logs" / "events.jsonl",
                          {"ts": now(), "task": "-", "kind": "models.changed", "summary": summary, "ref": CONFIG_NAME})
-    print(f"host: {host}")
+    print(f"host: {host} | mode: {config['mode']}")
     for role, model in role_models(config).items():
         spec = ROLES[role]
         print(f"{role}: {model or 'unset: run the models skill'} | needs: {spec['needs']} | runs: {spec['runs']}")
@@ -730,10 +808,23 @@ def cmd_models(project: Path, args: argparse.Namespace) -> int:
 def cmd_role(project: Path, args: argparse.Namespace) -> int:
     config = load_config(project)
     host, role = config["host"], args.role
-    model = role_models(config)[role]
+    model = role_models(config).get(role)
     name = agent_name(host, role)
     worktree = ("one git worktree per option: `git worktree add ../<repo>-spike-<option> -b spike/<option>`; "
                 "the spike works only there and is never merged")
+    if model == EXTERNAL:
+        print("PAUSE. The judge is external: the orchestrating session answers it. Stop now and end "
+              "your reply with the HANDOFF block, status JUDGE, and a judge request: the question, the "
+              "options, the criteria and the evidence file paths. The verdict arrives as your next prompt.")
+        print(f"Journal: record `role {role} ran on {EXTERNAL} via orchestrator`.")
+        return 0
+    if role == "builder":
+        if config["mode"] != "hybrid":
+            print("Solo mode has no builder role: this session builds.")
+            return 0
+        print("The builder is the main OpenCode session itself. The orchestrator starts it with "
+              "`dragonhoard.py delegate`; never spawn it as a subagent.")
+        return 0
     if host == "claude-code":
         extra = ', isolation: "worktree"' if role == "spiker" else ""
         print(f"Spawn subagent_type `{name}` with model `{model}`{extra}. Put several in one message to run them in parallel.")
@@ -754,6 +845,201 @@ def cmd_role(project: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mode(project: Path, args: argparse.Namespace) -> int:
+    config = load_config(project)
+    if args.mode != config["mode"]:
+        config["mode"] = args.mode
+        save_config(project, config)
+        if config.get("root"):
+            append_jsonl(project / config["root"] / "logs" / "events.jsonl",
+                         {"ts": now(), "task": "-", "kind": "mode.changed", "summary": f"{args.mode}: {args.why}", "ref": CONFIG_NAME})
+    print(f"mode: {config['mode']}")
+    if config["mode"] == "hybrid" and config["host"] != "opencode":
+        print("next: dragonhoard.py install --host opencode, then the models skill (builder, scout, spiker).")
+    return 0
+
+
+# --- hybrid: delegate a turn to the builder, verify what it did ----------------------------
+
+
+HANDOFF_STATUSES = ("DONE", "BLOCKED", "QUESTION", "JUDGE", "PARTIAL")
+HANDOFF_ASK = """
+
+---
+End your reply with this block, filled in, as plain lines (no code fence):
+HANDOFF
+status: DONE | BLOCKED | QUESTION | JUDGE | PARTIAL
+task: <task id, or ->
+files: <files you changed, or none>
+checks: <commands you ran and their result>
+questions: <questions for the owner, or none>
+judge: <judge request: question, options, criteria, evidence paths; or none>
+risks: <or none>"""
+TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|spec)/|[._-](test|spec)\.[a-z]+$")
+ASSERTION = re.compile(r"\bassert\w*|\bexpect\s*\(")
+SKIP_MARK = re.compile(r"\b(it|test|describe)\.(skip|only|todo)\b|\{\s*(skip|only|todo)\s*:|@pytest\.mark\.skip|\bxit\(")
+
+
+def git(project: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=project, capture_output=True, text=True).stdout
+
+
+def changed_files(project: Path, base: str) -> set[str]:
+    """Files changed since `base`: committed after it, plus anything pending in the work tree."""
+    committed = git(project, "diff", "--name-only", base, "HEAD").split()
+    pending = [line[3:].split(" -> ")[-1] for line in git(project, "status", "--porcelain", "-uall").splitlines()]
+    return set(committed) | set(pending)
+
+
+def pack_files(pack: str) -> set[str]:
+    """Backticked paths in the pack's `- **Files:**` bullet (it may span several lines)."""
+    match = re.search(r"^- \*\*Files:\*\*(.*?)(?=^- \*\*|^#|\Z)", pack, re.M | re.S)
+    tokens = BACKTICKED.findall(match.group(1)) if match else []
+    return {t.split("::")[0] for t in tokens if "." in t or "/" in t if not re.search(r"[<>{}*$ ]", t)}
+
+
+def weakened_tests(project: Path, base: str) -> list[str]:
+    """Existing test files that lost assertions, were deleted, or gained skip/only/todo marks."""
+    problems = []
+    for path in sorted(f for f in changed_files(project, base) if TEST_FILE.search(f)):
+        before = subprocess.run(["git", "show", f"{base}:{path}"], cwd=project, capture_output=True, text=True)
+        if before.returncode != 0:
+            continue  # a new test file cannot weaken an old one
+        old, file = before.stdout, project / path
+        new = file.read_text(errors="replace") if file.is_file() else ""
+        if not new:
+            problems.append(f"{path}: deleted")
+            continue
+        if len(ASSERTION.findall(new)) < len(ASSERTION.findall(old)):
+            problems.append(f"{path}: assertions {len(ASSERTION.findall(old))} -> {len(ASSERTION.findall(new))}")
+        if len(SKIP_MARK.findall(new)) > len(SKIP_MARK.findall(old)):
+            problems.append(f"{path}: new skip/only/todo mark")
+    return problems
+
+
+def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
+    """The orchestrator's own check of a builder's task; it never trusts the builder's report."""
+    config, project = workspace.config, workspace.project
+    row = next((r for r in status_rows(workspace.status_text()) if r["task"] == args.task), None)
+    if row is None:
+        print(f"verify FAIL: {args.task} is not in STATUS.md")
+        return 1
+    pack_path = workspace.root / row["pack"] if row["pack"] else None
+    pack = pack_path.read_text() if pack_path and pack_path.is_file() else ""
+    journal_path = pack_path.with_name(pack_path.name.replace(".md", ".journal.md")) if pack_path else None
+    journal = journal_path.read_text() if journal_path and journal_path.is_file() else ""
+    results = [("status", row["status"] in (*DONE_STATUSES, "BLOCKED"), row["status"])]
+    for command in config.get("checks", []):
+        run = subprocess.run(command, shell=True, cwd=project, capture_output=True, text=True, timeout=1800)
+        tail = (run.stdout + run.stderr).strip().splitlines()[-1:] or [""]
+        results.append((f"check `{command}`", run.returncode == 0, f"exit {run.returncode}: {tail[0][:120]}"))
+    bookkeeping = (f"{config['root']}/", CONFIG_NAME, f"{VENDOR_DIR}/", ".opencode/", "AGENTS.md", "opencode.json")
+    extra = sorted(f for f in changed_files(project, args.base) - pack_files(pack) if not f.startswith(bookkeeping))
+    unreported = [f for f in extra if f not in journal]
+    results.append(("scope", not unreported, f"outside the pack: {extra or 'none'}; unreported: {unreported or 'none'}"))
+    weakened = weakened_tests(project, args.base)
+    results.append(("tests not weakened", not weakened, weakened or "ok"))
+    results.append(("journal", "- Ran:" in journal and "- Outcome:" in journal, "attempt with Ran and Outcome"))
+    for name, ok, detail in results:
+        print(f"{'PASS' if ok else 'FAIL'}  {name}: {detail}")
+    failed = [name for name, ok, _ in results if not ok]
+    print(f"verify: {'FAIL' if failed else 'PASS'} | {args.task} | {len(failed)} failed")
+    return 1 if failed else 0
+
+
+def run_events(command: list[str], cwd: Path, first: float, idle: float) -> tuple[list[dict[str, Any]], bool]:
+    """Run a JSON-lines command; kill it when it stays silent too long. Returns (events, stalled)."""
+    proc = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+    assert proc.stdout is not None
+    selector = selectors.DefaultSelector()
+    selector.register(proc.stdout, selectors.EVENT_READ)
+    events: list[dict[str, Any]] = []
+    buffer = b""
+    while True:
+        if not selector.select(timeout=idle if events else first):
+            proc.kill()
+            proc.wait()
+            return events, True
+        chunk = os.read(proc.stdout.fileno(), 65536)
+        if not chunk:
+            break
+        *lines, buffer = (buffer + chunk).split(b"\n")
+        for line in lines:
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    proc.wait()
+    return events, False
+
+
+def parse_handoff(text: str) -> tuple[dict[str, str], str] | None:
+    """The last HANDOFF block in a reply: (fields, raw block), or None if absent or invalid."""
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if line.strip().strip("*#` ").upper() == "HANDOFF"]
+    if not starts:
+        return None
+    block = [line for line in lines[starts[-1]:] if line.strip() and not line.strip().startswith("```")]
+    fields = {}
+    for line in block[1:]:
+        key, sep, value = line.strip().lstrip("-* ").partition(":")
+        if sep:
+            fields[key.strip().strip("*").lower()] = value.strip()
+    status = fields.get("status", "").strip("*` ").upper()
+    if status not in HANDOFF_STATUSES:
+        return None
+    fields["status"] = status
+    return fields, "\n".join(block[:40])
+
+
+def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
+    """One builder turn in OpenCode. Prints only a stats line and the HANDOFF block: the raw
+    transcript goes to <root>/logs/sessions/, never into the orchestrator's context."""
+    config = workspace.config
+    builder = role_models(config).get("builder")
+    if config["mode"] != "hybrid" or not builder:
+        print("delegate needs mode hybrid and a builder model: dragonhoard.py mode hybrid, then the models skill")
+        return 1
+    folder = workspace.root / "logs" / "sessions"
+    folder.mkdir(parents=True, exist_ok=True)
+    session, prompt, started = args.session, args.prompt, time.time()
+    totals = {"steps": 0, "input": 0, "output": 0, "cache": 0, "cost": 0.0}
+    handoff, text = None, ""
+    for attempt in range(1, args.retries + 2):
+        command = [args.opencode, "run", "--format", "json", "-m", builder,
+                   *(["-s", session] if session else []), prompt + HANDOFF_ASK]
+        events, stalled = run_events(command, workspace.project, args.first, args.idle)
+        session = session or next((e.get("sessionID") for e in events if e.get("sessionID")), None)
+        stamp = now().replace(":", "").replace("+0000", "Z")
+        (folder / f"{stamp}-{(session or 'none')[-8:]}.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+        for event in events:
+            part = event.get("part") or {}
+            if event.get("type") == "step_finish":
+                tokens = part.get("tokens") or {}
+                totals["steps"] += 1
+                totals["input"] += tokens.get("input", 0)
+                totals["output"] += tokens.get("output", 0) + tokens.get("reasoning", 0)
+                totals["cache"] += (tokens.get("cache") or {}).get("read", 0)
+                totals["cost"] += part.get("cost") or 0
+        text = "\n".join((e.get("part") or {}).get("text", "") for e in events if e.get("type") == "text")
+        handoff = parse_handoff(text)
+        if handoff:
+            break
+        errors = [e for e in events if e.get("type") == "error"]
+        if attempt <= args.retries:
+            time.sleep(args.backoff * attempt if (stalled or errors or not events) else 0)
+            # Resume the same session when it got going; otherwise start the turn again.
+            prompt = ("Continue where you stopped." if stalled else "Your reply had no HANDOFF block.") if session else args.prompt
+    print(f"delegate session {session} | attempts {attempt} | steps {totals['steps']} | tokens in {totals['input']} "
+          f"out {totals['output']} cache-read {totals['cache']} | cost {totals['cost']:.4f} | {time.time() - started:.0f}s")
+    if handoff is None:
+        print("no valid HANDOFF block. Last reply lines:")
+        print("\n".join(text.strip().splitlines()[-15:]) or "(no reply)")
+        return 1
+    print(handoff[1])
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="dragonhoard")
     parser.add_argument("--project", default=".", help="project folder (searched upward for dragonhoard.json)")
@@ -761,6 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
     init = sub.add_parser("init")
     init.add_argument("--root", required=True)
     init.add_argument("--check", action="append")
+    init.add_argument("--mode", choices=MODES)
     sub.add_parser("next").add_argument("--json", action="store_true")
     log = sub.add_parser("log")
     log.add_argument("task")
@@ -772,6 +1059,22 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("hook")
     install = sub.add_parser("install")
     install.add_argument("--host", required=True, choices=sorted(HOSTS))
+    install.add_argument("--mcp-off", type=lambda s: [n for n in s.split(",") if n], default=[],
+                         help="hybrid: comma-separated MCP servers the builder must not see")
+    mode = sub.add_parser("mode")
+    mode.add_argument("mode", choices=MODES)
+    mode.add_argument("--why", default="")
+    delegate = sub.add_parser("delegate")
+    delegate.add_argument("prompt")
+    delegate.add_argument("--session")
+    delegate.add_argument("--retries", type=int, default=3)
+    delegate.add_argument("--first", type=float, default=240, help="seconds to wait for the first event")
+    delegate.add_argument("--idle", type=float, default=1200, help="seconds of silence before a retry")
+    delegate.add_argument("--backoff", type=float, default=30)
+    delegate.add_argument("--opencode", default="opencode", help=argparse.SUPPRESS)
+    verify = sub.add_parser("verify")
+    verify.add_argument("task")
+    verify.add_argument("--base", default="HEAD", help="revision the task started from")
     models = sub.add_parser("models")
     models.add_argument("--set", nargs="+", metavar="ROLE=MODEL")
     models.add_argument("--why", default="")
@@ -802,8 +1105,8 @@ def main(argv: list[str] | None = None) -> int:
     if project is None:
         print(f"no {CONFIG_NAME} found; run the dragonhoard init skill first")
         return 1
-    if args.command in ("models", "role"):
-        return (cmd_models if args.command == "models" else cmd_role)(project, args)
+    if args.command in ("models", "role", "mode"):
+        return {"models": cmd_models, "role": cmd_role, "mode": cmd_mode}[args.command](project, args)
     if not load_config(project).get("root"):
         print(f"{CONFIG_NAME} has no root yet; run the dragonhoard init skill first")
         return 1
@@ -811,7 +1114,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "digest":
         print(workspace.write_digest())
         return 0
-    handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson}
+    handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson,
+                "delegate": cmd_delegate, "verify": cmd_verify}
     return handlers[args.command](workspace, args)
 
 

@@ -22,7 +22,7 @@ domain articles (Hermes, SQLite, Phoenix and the rest).
 python3 tests/test_dragonhoard.py       # the only test: assert-based self-check, prints "ok"
 claude plugin validate .                # manifest check (the CLAUDE.md-at-root warning is expected)
 claude --plugin-dir .                   # load the plugin for one session, e.g. from a scratch project
-python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | check | hook | lesson
+python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | check | hook | lesson | mode | delegate | verify
 ```
 
 There is no lint config and no dependencies. `scripts/dragonhoard.py` must stay stdlib-only.
@@ -74,6 +74,20 @@ On hosts without per-agent models, the judge pauses so the owner can switch mode
 decision). Host facts and their sources are in `docs/hosts.md`; update it whenever `HOSTS`
 changes.
 
+**Two delivery modes** (`dragonhoard.json` `mode`, asked by init; see `docs/modes.md`):
+- `solo` (the default) behaves exactly like v0.2.
+- `hybrid`: Claude Code orchestrates with `skills/conduct`, and OpenCode builds headless.
+  - `delegate` runs `opencode run --format json` with first-event and idle timeouts and retries,
+    writes the events to `<root>/logs/sessions/`, and prints only a stats line and the HANDOFF
+    block.
+  - `verify` re-runs the checks, plus scope, test-weakening and journal checks.
+  - The `builder` role exists only in hybrid, and `judge` defaults to `external`. The external
+    judge gets no agent file; `role judge` tells the builder to stop with a JUDGE handoff.
+  - `install --host opencode` in hybrid also merges `opencode.json`: no `ask` rules (they hang
+    headless), git commits denied, skill/task allow-lists, `--mcp-off`.
+  - `conduct` is orchestrator-only and is never rendered into a builder host
+    (`ORCHESTRATOR_SKILLS`).
+
 The `SessionStart` hook (Claude Code) is in `.claude-plugin/plugin.json` and runs
 `dragonhoard.py hook`. Other hosts get the same output through the `AGENTS.md` block
 instruction. The hook prints the banner, the role models, the next task and the digest, and
@@ -102,4 +116,7 @@ start never dirties git.
   - exploration uses parallel subagents, with the cheaper model for retrieval;
   - models are configurable per role: the current model suggests, the owner confirms;
   - on hosts without per-agent models, the judge pauses for a model switch rather than running
-    on a weaker model.
+    on a weaker model;
+  - init always asks the mode: full Claude Code, or Claude Code + OpenCode. In hybrid the
+    orchestrating Claude Code session is the judge, and it verifies every builder DONE
+    independently.

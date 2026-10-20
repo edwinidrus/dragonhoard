@@ -38,6 +38,10 @@ that role's needs:
 - **judge**: the strongest reasoning model available. It runs rarely, so cost matters least.
   On hosts where `dragonhoard.py role judge` says PAUSE, this is the model the owner will
   switch the session to.
+- **builder** (hybrid only): the OpenCode model that works each task. It reads skills step by
+  step and runs tests, at the lowest cost that still passes `verify`; a free model is a fair
+  first choice. In hybrid the judge is `external` (the orchestrating Claude Code session), so
+  do not suggest a judge model there. Scout and spiker run inside OpenCode too.
 
 Also use the journey's evidence, when there is any, from `<root>/DIGEST.md` and the journals:
 - spikes ending `INCONCLUSIVE` or out of timebox: the spiker may be too weak;
@@ -58,6 +62,7 @@ wait (in Claude Code, use AskUserQuestion). Never set a model the owner has not 
 
 ```bash
 dragonhoard.py models --set scout=<model> spiker=<model> judge=<model> --why "<one-line reason>"
+# hybrid: dragonhoard.py models --set builder=<model> scout=<model> spiker=<model> --why "<reason>"
 ```
 
 This saves `dragonhoard.json`, regenerates the host's role-agent files (OpenCode and Codex), and

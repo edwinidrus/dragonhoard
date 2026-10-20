@@ -61,8 +61,9 @@ You may draft a new wording; it goes through the screen again.
 
 ## 3. Judge (frontier model)
 
-Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, ask the owner to
-switch models first. Give the judge (Job 2 in its instructions) the screened candidates, their
+Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, do exactly what it
+says: ask the owner to switch models first, or (external judge) stop and hand the judge request
+to the orchestrator. Give the judge (Job 2 in its instructions) the screened candidates, their
 provenance, the paths of the journal attempts they cite, and `<root>/LESSONS.md`. The judge
 checks each one: faithful to
 the evidence, general, not a duplicate, risk. It can add warnings. It cannot pass a candidate

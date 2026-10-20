@@ -50,8 +50,9 @@ Spikes are evidence, not delivery. Their code is never merged.
 
 ## 4. Judge
 
-Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, stop and ask the
-owner to switch models before judging. Give the judge the question, the criteria and every
+Run `dragonhoard.py role judge` and follow what it prints. If it says PAUSE, do exactly what it
+says: ask the owner to switch models before judging, or (external judge) stop and hand the judge
+request to the orchestrator. Give the judge the question, the criteria and every
 spiker report. It verifies the reports, then returns a comparison table, a recommendation and
 warnings.
 
