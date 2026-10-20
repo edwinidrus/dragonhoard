@@ -11,6 +11,9 @@ description: >
 CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoard.py` below).
 `<root>` is the `root` in `dragonhoard.json`; the standard checks are its `checks`.
 
+In hybrid mode, the Claude Code session uses `/dragonhoard:conduct` instead. It runs this skill
+itself only when conduct escalates a task. The OpenCode builder runs this skill normally.
+
 ## 0. Pick
 
 ```bash

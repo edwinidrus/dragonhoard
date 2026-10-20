@@ -28,6 +28,20 @@ that feature.
   - with `scout=opencode/deepseek-v4.1-flash-free` set, the main agent delegated to
     `dragonhoard-scout`, which answered in the scout format, correct against `grep -n`.
 
+**OpenCode 2.x** (local `opencode v2.1.1`, checked 2026-10-20 for hybrid mode, see [modes.md](modes.md))
+- Still reads `.opencode/skills/<name>/SKILL.md` and `.opencode/agents/<name>.md`; a project
+  skill and a project subagent were both listed and invoked by `opencode run`.
+- Config permissions are translated to `{action, resource, effect}`, with `shell` in place of
+  `bash` (`opencode debug config`). Glob resources work: `git commit*` deny blocked the
+  command with `Permission denied: shell`.
+- `skill` and `task` permissions act as allow-lists: denied skills and agents disappear from
+  the model's list. `question: deny` is accepted.
+- `opencode run --format json` streams one JSON event per line: `step_start`, `tool_use`
+  (`part.tool`, `part.state`), `step_finish` (`part.tokens`, `part.cost`), `text`
+  (`part.text`). `-s <sessionID>` continues a session.
+- About 1 in 4 short runs on the free model stalled with no event for 2+ minutes and then
+  worked on retry. Hence `delegate`'s first-event and idle timeouts and its retries.
+
 **Codex CLI** (docs: learn.chatgpt.com/docs/agent-configuration/subagents; local `codex-cli 0.162.1`)
 - Custom agents are TOML files in `.codex/agents/`, one agent per file.
   - Required keys: `name`, `description`, `developer_instructions`. Optional: `model` and

@@ -203,11 +203,132 @@ def test_hosts(tmp: Path) -> None:
     assert "warning" in run("--project", str(cc), "models", "--set", "judge=some-other-model")[1]
 
 
+STUB_OPENCODE = """#!/usr/bin/env python3
+# Fake `opencode run --format json`: plays the next behaviour from script.txt per call.
+import json, sys, time
+from pathlib import Path
+here = Path(__file__).parent
+plan = (here / "script.txt").read_text().split(",")
+calls = here / "calls.txt"
+n = len(calls.read_text().splitlines()) if calls.exists() else 0
+with calls.open("a") as log:
+    log.write(" ".join(sys.argv[1:]).split("---")[0].replace(chr(10), " ") + chr(10))
+behaviour = plan[min(n, len(plan) - 1)]
+def emit(kind, **part):
+    print(json.dumps({"type": kind, "sessionID": "ses_stub1234", "part": part}), flush=True)
+emit("step_start")
+if behaviour == "hang":
+    time.sleep(30)
+emit("step_finish", tokens={"input": 10, "output": 5, "reasoning": 1, "cache": {"read": 100}}, cost=0)
+text = "built it" if behaviour == "nohandoff" else "built it\\nHANDOFF\\nstatus: DONE\\ntask: M1-T01\\nfiles: src/a.js\\nchecks: npm test pass\\nquestions: none\\njudge: none\\nrisks: none"
+emit("text", text=text)
+"""
+
+
+def test_hybrid(tmp: Path) -> None:
+    import subprocess
+    sh = lambda *cmd: subprocess.run(cmd, cwd=tmp, check=True, capture_output=True)  # noqa: E731
+    sh("git", "init", "-q")
+    assert run("--project", str(tmp), "init", "--root", "impl", "--mode", "hybrid", "--check", "test -f src/a.js")[0] == 0
+    assert json.loads((tmp / "dragonhoard.json").read_text())["mode"] == "hybrid"
+    pause = run("--project", str(tmp), "role", "judge")[1]
+    assert pause.startswith("PAUSE") and "status JUDGE" in pause
+    assert "delegate" in run("--project", str(tmp), "role", "builder")[1]
+    (tmp / "opencode.json").write_text('{"mcp": {"obsidian": {"enabled": false}}, "plugin": ["p.mjs"]}')
+    assert run("--project", str(tmp), "install", "--host", "opencode", "--mcp-off", "obsidian,exa")[0] == 0
+    oc = json.loads((tmp / "opencode.json").read_text())
+    assert oc["permission"]["bash"]["git commit*"] == "deny" and oc["permission"]["question"] == "deny"
+    assert oc["permission"]["skill"]["*"] == "deny" and oc["permission"]["skill"]["dragonhoard-*"] == "allow"
+    assert oc["mcp"]["obsidian"] == {"type": "local", "command": ["true"], "enabled": False}  # full entry
+    assert set(oc["mcp"]) == {"obsidian", "exa"} and oc["plugin"] == ["p.mjs"]  # partial entry repaired, other keys kept
+    assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
+    assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
+    assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
+    assert not (tmp / ".opencode/skills/dragonhoard-conduct").exists()  # orchestrator-only skill
+    assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
+    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x", "scout=opencode/free-y#high", "--why", "free")
+    scout = (tmp / ".opencode/agents/dragonhoard-scout.md").read_text()
+    assert 'model: "opencode/free-y"\nvariant: high\n' in scout, scout  # an agent file needs variant as its own key
+    oc = json.loads((tmp / "opencode.json").read_text())
+    assert oc["model"] == "opencode/free-x" and oc["mcp"]["obsidian"]["enabled"] is False  # merged, kept
+    run("--project", str(tmp), "models", "--set", "judge=big-model")
+    assert (tmp / ".opencode/agents/dragonhoard-judge.md").is_file()
+    run("--project", str(tmp), "models", "--set", "judge=external")
+    assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # stale agent removed
+    assert "orchestrator" in run("--project", str(tmp), "hook")[1]
+    assert "solo" in run("--project", str(tmp), "mode", "solo", "--why", "x")[1]
+    assert "mode.changed" in (tmp / "impl/logs/events.jsonl").read_text()
+    assert run("--project", str(tmp), "delegate", "x")[0] == 1  # solo cannot delegate
+    run("--project", str(tmp), "mode", "hybrid")
+
+    # verify: a DONE task whose pack allows src/a.js and test/a.test.js
+    (tmp / "impl/STATUS.md").write_text("| # | Task | Title | Status | Depends on | Pack |\n|---|---|---|---|---|---|\n"
+                                        "| 1 | M1-T01 | t | DONE | — | [pack](M1-x/tasks/M1-T01-x.md) |\n")
+    (tmp / "impl/M1-x/tasks").mkdir(parents=True)
+    (tmp / "impl/M1-x/tasks/M1-T01-x.md").write_text("- **Files:** `src/a.js` + `test/a.test.js`\n- **Do not:** x\n")
+    journal = tmp / "impl/M1-x/tasks/M1-T01-x.journal.md"
+    journal.write_text("## Attempt 1\n- Ran: `npm test` -> 1 failing, then pass\n- Outcome: PASS\n")
+    (tmp / "test").mkdir()
+    (tmp / "test/a.test.js").write_text("assert.equal(a(), 1);\nassert.ok(b());\n")
+    sh("git", "add", "-A")
+    sh("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base")
+    (tmp / "src").mkdir()
+    (tmp / "src/a.js").write_text("export const a = () => 1;\n")
+    code, out = run("--project", str(tmp), "verify", "M1-T01")
+    assert code == 0 and "verify: PASS" in out, out
+    (tmp / "test/a.test.js").write_text("assert.equal(a(), 1);\ntest.skip('b', () => {});\n")
+    out = run("--project", str(tmp), "verify", "M1-T01")[1]
+    assert "FAIL  tests not weakened" in out and "assertions 2 -> 1" in out and "skip" in out, out
+    (tmp / "test/a.test.js").write_text("assert.equal(a(), 1);\nassert.ok(b());\n")
+    (tmp / "src/extra.js").write_text("x")
+    assert "FAIL  scope" in run("--project", str(tmp), "verify", "M1-T01")[1]
+    journal.write_text(journal.read_text() + "- Also changed `src/extra.js` (reported).\n")
+    assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0  # a reported extra is the owner's call
+    (tmp / "src/a.js").unlink()
+    assert "FAIL  check `test -f src/a.js`" in run("--project", str(tmp), "verify", "M1-T01")[1]
+
+    # delegate against a stub opencode: hang, then a reply without HANDOFF, then a good one
+    stub_dir = tmp.parent / "stub"
+    stub_dir.mkdir()
+    stub = stub_dir / "opencode"
+    stub.write_text(STUB_OPENCODE)
+    stub.chmod(0o755)
+    (stub_dir / "script.txt").write_text("hang,nohandoff,ok")
+    code, out = run("--project", str(tmp), "delegate", "/dragonhoard-next", "--opencode", str(stub),
+                    "--first", "1", "--idle", "1", "--backoff", "0")
+    calls = (stub_dir / "calls.txt").read_text().splitlines()
+    assert code == 0 and "attempts 3" in out and "status: DONE" in out and "built it" not in out, out
+    assert "-s ses_stub1234" in calls[1] and "Continue where you stopped" in calls[1], calls  # stalled after start
+    assert "-s ses_stub1234" in calls[2] and "no HANDOFF" in calls[2], calls
+    assert "opencode/free-x" in calls[0] and "/dragonhoard-next" in calls[0]
+    logs = list((tmp / "impl/logs/sessions").glob("*.jsonl"))
+    assert len(logs) == 1 and "delegate.stalled" in logs[0].read_text()  # streamed live, one file per delegate
+    assert logs[0].read_text().count("delegate.attempt") == 3
+    events = (tmp / "impl/logs/events.jsonl").read_text()
+    assert "delegate.started" in events and '"task": "M1-T01", "kind": "delegate.done"' in events
+    assert "verify.passed" in events and "verify.failed" in events
+    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x#max")
+    assert json.loads((tmp / "opencode.json").read_text())["model"] == "opencode/free-x#max"
+    assert json.loads((tmp / "opencode.json").read_text())["permission"]["read"]["*.env"] == "deny"
+    run("--project", str(tmp), "delegate", "y", "--opencode", str(stub), "--backoff", "0")
+    assert "-m opencode/free-x#max" in (stub_dir / "calls.txt").read_text().splitlines()[-1]
+    assert (tmp / "impl/logs/sessions/.gitignore").read_text() == "*\n"
+    (stub_dir / "script.txt").write_text("nohandoff")
+    code, out = run("--project", str(tmp), "delegate", "x", "--opencode", str(stub), "--retries", "1", "--backoff", "0")
+    assert code == 1 and "no valid HANDOFF" in out and "built it" in out
+    fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
+    assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"
+    assert dragonhoard.parse_handoff("HANDOFF\nstatus: maybe\n") is None
+
+
 if __name__ == "__main__":
     test_tables_and_next()
     test_screen()
     with tempfile.TemporaryDirectory() as folder:
         test_hosts(Path(folder))
+    with tempfile.TemporaryDirectory() as folder:
+        (Path(folder) / "repo").mkdir()
+        test_hybrid(Path(folder) / "repo")
     with tempfile.TemporaryDirectory() as folder:
         test_mismatch_and_missing(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
