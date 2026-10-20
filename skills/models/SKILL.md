@@ -42,6 +42,11 @@ that role's needs:
   step and runs tests, at the lowest cost that still passes `verify`; a free model is a fair
   first choice. In hybrid the judge is `external` (the orchestrating Claude Code session), so
   do not suggest a judge model there. Scout and spiker run inside OpenCode too.
+- **Effort variants** (OpenCode): a model can carry a variant, `provider/model#variant`, such as a
+  reasoning effort (`#low`, `#high`, `#max`). OpenCode rejects a variant the model lacks
+  ("Variant unavailable"), so try one short `opencode run -m <model>#<variant> "hi"` before
+  setting it. On a free model, the highest effort costs nothing but time: suggest it for
+  builder and spiker.
 
 Also use the journey's evidence, when there is any, from `<root>/DIGEST.md` and the journals:
 - spikes ending `INCONCLUSIVE` or out of timebox: the spiker may be too weak;

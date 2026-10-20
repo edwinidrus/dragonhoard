@@ -246,7 +246,9 @@ def test_hybrid(tmp: Path) -> None:
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
     assert not (tmp / ".opencode/skills/dragonhoard-conduct").exists()  # orchestrator-only skill
     assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
-    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x", "--why", "free")
+    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x", "scout=opencode/free-y#high", "--why", "free")
+    scout = (tmp / ".opencode/agents/dragonhoard-scout.md").read_text()
+    assert 'model: "opencode/free-y"\nvariant: high\n' in scout, scout  # an agent file needs variant as its own key
     oc = json.loads((tmp / "opencode.json").read_text())
     assert oc["model"] == "opencode/free-x" and oc["mcp"]["obsidian"]["enabled"] is False  # merged, kept
     run("--project", str(tmp), "models", "--set", "judge=big-model")
@@ -305,6 +307,11 @@ def test_hybrid(tmp: Path) -> None:
     events = (tmp / "impl/logs/events.jsonl").read_text()
     assert "delegate.started" in events and '"task": "M1-T01", "kind": "delegate.done"' in events
     assert "verify.passed" in events and "verify.failed" in events
+    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x#max")
+    assert json.loads((tmp / "opencode.json").read_text())["model"] == "opencode/free-x#max"
+    assert json.loads((tmp / "opencode.json").read_text())["permission"]["read"]["*.env"] == "deny"
+    run("--project", str(tmp), "delegate", "y", "--opencode", str(stub), "--backoff", "0")
+    assert "-m opencode/free-x#max" in (stub_dir / "calls.txt").read_text().splitlines()[-1]
     assert (tmp / "impl/logs/sessions/.gitignore").read_text() == "*\n"
     (stub_dir / "script.txt").write_text("nohandoff")
     code, out = run("--project", str(tmp), "delegate", "x", "--opencode", str(stub), "--retries", "1", "--backoff", "0")

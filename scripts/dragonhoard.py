@@ -626,7 +626,10 @@ def render_agent(host: str, role: str, model: str | None, source: str) -> tuple[
     body = body.strip() + "\n"
     if host == "opencode":
         permission = "".join(f"  {k}: {v}\n" for k, v in ROLES[role]["permission"].items())
-        model_line = f"model: {json.dumps(model)}\n" if model else ""
+        # `provider/model#variant` (e.g. reasoning effort) works on the command line and in opencode.json,
+        # but an agent file silently drops the whole model unless the variant is its own key.
+        base, _, variant = (model or "").partition("#")
+        model_line = (f"model: {json.dumps(base)}\n" if base else "") + (f"variant: {variant}\n" if variant else "")
         text = (
             f"---\ndescription: {json.dumps(description)}\nmode: subagent\n{model_line}"
             f"permission:\n{permission}---\n\n{body}"
@@ -764,6 +767,7 @@ def write_opencode_config(project: Path, config: dict[str, Any], mcp_off: list[s
         data["model"] = builder
     data["permission"] = {
         "edit": "allow",
+        "read": {"*": "allow", "*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"},  # default asks
         "question": "deny",
         "external_directory": "deny",
         "bash": {"*": "allow", **{f"{command}*": "deny" for command in DENIED_COMMANDS}},
