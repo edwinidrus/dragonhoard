@@ -1,0 +1,3 @@
+{"lane": 2.5, "result": {"contactPairSteps":3412,"minGap":1.367,"deepOverlapSteps":0,"nonFiniteSteps":0,"laps":[0,2,3,3]}}
+{"lane": -2.5, "result": {"contactPairSteps":3170,"minGap":1.387,"deepOverlapSteps":0,"nonFiniteSteps":0,"laps":[0,2,3,3]}}
+{"lane": 0, "result": {"contactPairSteps":3103,"minGap":1.391,"deepOverlapSteps":0,"nonFiniteSteps":0,"laps":[0,2,3,3]}}

@@ -6,7 +6,7 @@ builder's agent config. Probed 2026-10-19 with Node 22.22.2 and Playwright Chrom
 ## Per gate
 
 ```bash
-cd /home/edwinidrus/hobbys/dragonhoard_planing
+cd ~/hobbys/dragonhoard_planing
 python3 evals/kart-racer/gate.py <served dir> gates/G<n> --static   # REA scenario + static analysis
 ```
 
@@ -45,3 +45,12 @@ Then **compare with the GATE.md claims**. Every claimed criterion is either back
   `getContext`, file graph) but not string literals such as `"keydown"`.
 - Canvas content is opaque to DOM capture. Frame changes come from screenshot hashes, and HUD
   text from the DOM only if the game draws its HUD in HTML.
+
+## Auditor Playwright (`play.mjs`, written at G0)
+
+`node play.mjs <served dir> <game repo> [holdMs]` loads Playwright from the game repo's own `node_modules`, serves the build, and reports page/console errors, `window.__hoard.frame` advance, the screenshot change after holding ArrowUp, and any exposed state.
+
+- Calibration: `calibration/broken` → `pageErrors: ["undefinedKartPhysics is not defined"]`.
+- G0: 0 errors; frame 88→201.
+- Builds are made outside the repo: `npx vite build --outDir <scratch>/gNdist --emptyOutDir`.
+- `gate.py` frames-change is **n/a for static scenes** (G0). From G1 on, the scene moves, so it applies.

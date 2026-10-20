@@ -27,24 +27,14 @@ sys.path.insert(0, str(HERE.parents[1] / "scripts"))
 import dragonhoard  # noqa: E402
 
 LOG = HERE / "audit.jsonl"
-FAIL_WORDS = re.compile(r"\b(fail(ed|s|ing)?|error|not ok|red|exit [1-9])\b", re.I)
+FAIL_WORDS = re.compile(r"\b(fail(ed|s|ing)?|error|not ok|red|exit[ =:]?[1-9]|ERR_\w+|# fail [1-9])", re.I)
+RAN_BLOCK = re.compile(r"^- Ran:(.*(?:\n[ \t]+.*)*)", re.M)  # one-line or nested sub-bullets
+# Names from the game that inspired the improvements; none may appear in the game repo (hidden list).
+IP_TERMS = re.compile(r"bandicoot|crash team|\bctr\b|dingo|naughty dog|\bsony\b|skyway|cortex|tropy|"
+                      r"oxide|aku.?aku|uka.?uka|\bcoco\b|tiny tiger|n\. ?gin|\bpolar\b|\bpura\b")
 
 
-def git(project: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=project, capture_output=True, text=True).stdout
-
-
-def pack_files(pack: str) -> set[str]:
-    """Backticked paths in the pack's `- **Files:**` bullet (it may span several lines)."""
-    match = re.search(r"^- \*\*Files:\*\*(.*?)(?=^- \*\*|^#|\Z)", pack, re.M | re.S)
-    tokens = dragonhoard.BACKTICKED.findall(match.group(1)) if match else []
-    return {t.split("::")[0] for t in tokens if "." in t or "/" in t if not re.search(r"[<>{}*$ ]", t)}
-
-
-def changed_files(project: Path, base: str) -> set[str]:
-    committed = git(project, "diff", "--name-only", base, "HEAD").split()
-    pending = [line[3:] for line in git(project, "status", "--porcelain").splitlines()]
-    return set(committed) | set(pending)
+git, pack_files, changed_files = dragonhoard.git, dragonhoard.pack_files, dragonhoard.changed_files
 
 
 def audit(project: Path, task: str, base: str) -> dict[str, Any]:
@@ -83,7 +73,7 @@ def audit(project: Path, task: str, base: str) -> dict[str, Any]:
     results["R3"] = ("FAIL" if missing else "PASS", missing or "complete")
 
     allowed = pack_files(pack)
-    bookkeeping = (f"{config['root']}/", dragonhoard.CONFIG_NAME)
+    bookkeeping = (f"{config['root']}/", dragonhoard.CONFIG_NAME, f"{dragonhoard.VENDOR_DIR}/", ".opencode/", "AGENTS.md", "opencode.json")
     extra = sorted(f for f in changed_files(project, base) - allowed if not f.startswith(bookkeeping))
     unreported = [f for f in extra if f not in journal]
     results["R4"] = (
@@ -101,9 +91,17 @@ def audit(project: Path, task: str, base: str) -> dict[str, Any]:
     else:
         results["R1"] = ("n/a", f"status {status}")
 
-    ran = [line for line in journal.splitlines() if line.lstrip().startswith("- Ran:")]
-    red_first = bool(ran) and bool(FAIL_WORDS.search(" ".join(ran[:-1]) or ran[0]))
-    results["R5"] = ("seen" if red_first else "not seen", "report-only heuristic")
+    ran = " ".join(RAN_BLOCK.findall(journal))
+    red_first = bool(FAIL_WORDS.search(ran))
+    results["R5"] = ("seen" if red_first else "not seen", "report-only heuristic: a red run is recorded under Ran")
+
+    # Logs and journals may quote the owner's words; everything that ships or feeds the build may not.
+    weakened = dragonhoard.weakened_tests(project, base)
+    results["R13"] = ("FAIL" if weakened else "PASS", weakened or "no test weakened")
+
+    hits = git(project, "grep", "-nIiE", "--untracked", IP_TERMS.pattern, "--", ".", ":!node_modules",
+               f":!{config['root']}/logs", ":!*.journal.md").splitlines()
+    results["IP"] = ("FAIL" if hits else "PASS", hits[:10] or "no protected names")
     return results
 
 
@@ -139,8 +137,13 @@ def self_check() -> None:
             progress.append(f"| {task} | DONE | `{files[0]}` |")
             (root / pack).parent.mkdir(parents=True, exist_ok=True)
             (root / pack).write_text(f"## 1. Plan\n\n- **Files:** `{files[0]}` + `tests/{task}.test.js`\n- **Do not:** x\n")
+            journals = {  # one-line style, a run with no red, and nested sub-bullets
+                "M1-T01": "- Ran: `node --test` -> 1 failing\n- Ran: `node --test` -> pass\n",
+                "M1-T02": "- Ran: `node --test` -> pass\n",
+                "M1-T03": "- Ran:\n  - `npm test` -> `ERR_MODULE_NOT_FOUND`, exit=1\n  - `npm test` -> pass\n",
+            }
             (root / pack.replace(".md", ".journal.md")).write_text(
-                "## Attempt 1\n- Ran: `node --test` -> 1 failing\n- Ran: `node --test` -> pass\n- Outcome: PASS\n")
+                f"## Attempt 1\n{journals[task]}- Outcome: PASS\n")
             for kind in ("task.started", "task.done"):
                 if (task, kind) != ("M1-T03", "task.started"):  # M1-T03 skips its start event
                     dragonhoard.append_jsonl(root / "logs/events.jsonl", {"ts": "t", "task": task, "kind": kind, "summary": "", "ref": ""})
@@ -163,11 +166,21 @@ def self_check() -> None:
         checkpoint("M1-T02", "src/b.js", "src/extra.js", "impl/notes.md")  # bookkeeping is in scope
         result = audit(project, "M1-T02", "HEAD~1")
         assert result["R4"][0] == "FAIL" and result["R4"][1]["extra"] == ["src/extra.js"], result["R4"]
+        assert result["R5"][0] == "not seen"
+        assert result["IP"][0] == "PASS", result["IP"]
         checkpoint("M1-T03", "src/c.js", "broken")
+        (project / "src/c.js").write_text("// racer: Dingo-ish hybrid\n")  # untracked edits count too
+        (root / "logs/owner.md").write_text("owner asked for a Dingo copy; declined\n")  # quoting is fine
         result = audit(project, "M1-T03", "HEAD~1")
         assert result["R1"][0] == "FAIL", result["R1"]
         assert result["R3"] == ("FAIL", ["task.started"]), result["R3"]
         assert result["R5"][0] == "seen"
+        assert result["IP"][0] == "FAIL" and [h.split(":")[0] for h in result["IP"][1]] == ["src/c.js"], result["IP"]
+        assert result["R13"][0] == "PASS", result["R13"]
+        (project / "tests/M1-T01.test.js").write_text("assert(1)\nassert(2)\n")
+        checkpoint("asserts")
+        (project / "tests/M1-T01.test.js").write_text("assert(1)\n")
+        assert audit(project, "M1-T03", "HEAD")["R13"] == ("FAIL", ["tests/M1-T01.test.js: assertions 2 -> 1"])
         assert len(log.read_text().splitlines()) == 1
     print("self-check ok")
 

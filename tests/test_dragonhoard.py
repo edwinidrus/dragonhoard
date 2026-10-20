@@ -219,6 +219,10 @@ def emit(kind, **part):
 emit("step_start")
 if behaviour == "hang":
     time.sleep(30)
+if behaviour in ("quota", "novariant"):
+    message = "Rate limit exceeded. Please try again later." if behaviour == "quota" else "Variant unavailable for x: xhigh"
+    print(json.dumps({"type": "error", "sessionID": "ses_stub1234", "error": {"type": "provider.quota" if behaviour == "quota" else "provider.no-route", "message": message}}), flush=True)
+    sys.exit(0)
 emit("step_finish", tokens={"input": 10, "output": 5, "reasoning": 1, "cache": {"read": 100}}, cost=0)
 text = "built it" if behaviour == "nohandoff" else "built it\\nHANDOFF\\nstatus: DONE\\ntask: M1-T01\\nfiles: src/a.js\\nchecks: npm test pass\\nquestions: none\\njudge: none\\nrisks: none"
 emit("text", text=text)
@@ -316,6 +320,23 @@ def test_hybrid(tmp: Path) -> None:
     (stub_dir / "script.txt").write_text("nohandoff")
     code, out = run("--project", str(tmp), "delegate", "x", "--opencode", str(stub), "--retries", "1", "--backoff", "0")
     assert code == 1 and "no valid HANDOFF" in out and "built it" in out
+    # a rate limit waits instead of spending retries, and steps the effort down to the floor (high)
+    run("--project", str(tmp), "models", "--set", "builder=opencode/free-x#max")
+    (stub_dir / "script.txt").write_text("quota,novariant,quota,ok")
+    (stub_dir / "calls.txt").unlink()  # the stub plays its script from the first call again
+    before = 0
+    code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--retries", "0",
+                    "--quota-wait", "0", "--backoff", "0")
+    calls = (stub_dir / "calls.txt").read_text().splitlines()[before:]
+    assert code == 0 and "status: DONE" in out, out
+    assert ["#max" in calls[0], "#xhigh" in calls[1], "#high" in calls[2], "#high" in calls[3]] == [True] * 4, calls
+    assert "Continue where you stopped" in calls[1]
+    assert "delegate.rate_limited" in (tmp / "impl/logs/events.jsonl").read_text()
+    (stub_dir / "script.txt").write_text("quota")
+    (stub_dir / "calls.txt").unlink()
+    code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--quota-wait", "0", "--quota-patience", "0")
+    assert code == 3 and "RATE-LIMITED: Rate limit exceeded" in out, out
+    assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
     assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"
     assert dragonhoard.parse_handoff("HANDOFF\nstatus: maybe\n") is None

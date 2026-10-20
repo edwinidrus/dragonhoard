@@ -71,6 +71,13 @@ What `install` writes to the project `opencode.json` (it is merged; your other k
   differently.
 - `mcp.<name>.enabled = false` for every server passed to `--mcp-off`.
 
+Free tiers have usage limits (OpenCode Zen answers `FreeUsageLimitError`). `delegate` treats a
+limit as a wait, not a failure:
+- it probes every `--quota-wait` seconds (900);
+- it steps a `#variant` effort down one level per limit, but never below `effort_floor` (default
+  `high`);
+- after `--quota-patience` (6 h) it exits with code 3, `RATE-LIMITED`.
+
 The free models on OpenCode Zen may use prompts to improve the model. Keep secrets out of the
 repository, and turn off MCP servers that reach personal data.
 
