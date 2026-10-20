@@ -238,7 +238,8 @@ def test_hybrid(tmp: Path) -> None:
     oc = json.loads((tmp / "opencode.json").read_text())
     assert oc["permission"]["bash"]["git commit*"] == "deny" and oc["permission"]["question"] == "deny"
     assert oc["permission"]["skill"]["*"] == "deny" and oc["permission"]["skill"]["dragonhoard-*"] == "allow"
-    assert oc["mcp"] == {"obsidian": {"enabled": False}, "exa": {"enabled": False}}
+    assert oc["mcp"]["obsidian"] == {"type": "local", "command": ["true"], "enabled": False}  # full entry
+    assert set(oc["mcp"]) == {"obsidian", "exa"}
     assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
     assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
@@ -246,7 +247,11 @@ def test_hybrid(tmp: Path) -> None:
     assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
     run("--project", str(tmp), "models", "--set", "builder=opencode/free-x", "--why", "free")
     oc = json.loads((tmp / "opencode.json").read_text())
-    assert oc["model"] == "opencode/free-x" and oc["mcp"]["obsidian"] == {"enabled": False}  # merged, kept
+    assert oc["model"] == "opencode/free-x" and oc["mcp"]["obsidian"]["enabled"] is False  # merged, kept
+    run("--project", str(tmp), "models", "--set", "judge=big-model")
+    assert (tmp / ".opencode/agents/dragonhoard-judge.md").is_file()
+    run("--project", str(tmp), "models", "--set", "judge=external")
+    assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # stale agent removed
     assert "orchestrator" in run("--project", str(tmp), "hook")[1]
     assert "solo" in run("--project", str(tmp), "mode", "solo", "--why", "x")[1]
     assert "mode.changed" in (tmp / "impl/logs/events.jsonl").read_text()

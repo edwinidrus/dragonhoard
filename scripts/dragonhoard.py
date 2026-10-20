@@ -649,9 +649,12 @@ def write_agents(project: Path, config: dict[str, Any]) -> list[str]:
         return []
     written = []
     for role, model in role_models(config).items():
-        if role == "builder" or model == EXTERNAL:
+        if role == "builder":
             continue
         source = (PLUGIN_ROOT / "agents" / f"{role}.md").read_text()
+        if model == EXTERNAL:  # answered by the orchestrator: remove an agent file an earlier model left
+            (project / render_agent(host, role, None, source)[0]).unlink(missing_ok=True)
+            continue
         relative, text = render_agent(host, role, model, source)
         (project / relative).parent.mkdir(parents=True, exist_ok=True)
         (project / relative).write_text(text)
@@ -768,7 +771,8 @@ def write_opencode_config(project: Path, config: dict[str, Any], mcp_off: list[s
         "task": {"*": "deny", "dragonhoard-*": "allow"},
     }
     for name in mcp_off:
-        data.setdefault("mcp", {}).setdefault(name, {})["enabled"] = False
+        # OpenCode 2.x silently drops a partial entry, so an override needs a type and a command.
+        data.setdefault("mcp", {}).setdefault(name, {"type": "local", "command": ["true"]})["enabled"] = False
     path.write_text(json.dumps(data, indent=2) + "\n")
 
 
