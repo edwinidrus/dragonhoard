@@ -1009,6 +1009,18 @@ def parse_handoff(text: str) -> tuple[dict[str, str], str] | None:
     return fields, "\n".join(block[:40])
 
 
+EFFORT_LADDER = ("max", "xhigh", "high", "medium", "low")  # OpenCode variant names, strongest first
+
+
+def lower_effort(model: str, floor: str) -> str:
+    """`provider/model#max` one effort step down, never below `floor`; other models unchanged."""
+    base, _, variant = model.partition("#")
+    if variant not in EFFORT_LADDER or floor not in EFFORT_LADDER:
+        return model
+    step = EFFORT_LADDER.index(variant) + 1
+    return f"{base}#{EFFORT_LADDER[step]}" if step <= EFFORT_LADDER.index(floor) else model
+
+
 def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     """One builder turn in OpenCode. Prints only a stats line and the HANDOFF block: the raw
     transcript goes to <root>/logs/sessions/, never into the orchestrator's context."""
@@ -1028,12 +1040,15 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     reference = log.relative_to(workspace.root).as_posix()
     append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "delegate.started",
                                     "summary": f"{builder}: {args.prompt[:100]}", "ref": reference})
-    for attempt in range(1, args.retries + 2):
+    floor = args.effort_floor or config.get("effort_floor", "high")
+    attempt, quota_since, rate_limited = 0, None, ""
+    while True:
+        attempt += 1
         command = [args.opencode, "run", "--format", "json", "-m", builder,
                    *(["-s", session] if session else []), prompt + HANDOFF_ASK]
         with log.open("a") as sink:
             sink.write(json.dumps({"type": "delegate.attempt", "ts": now(), "attempt": attempt, "session": session,
-                                   "prompt": prompt}) + "\n")
+                                   "model": builder, "prompt": prompt}) + "\n")
         events, stalled = run_events(command, workspace.project, args.first, args.idle, log)
         session = session or next((e.get("sessionID") for e in events if e.get("sessionID")), None)
         for event in events:
@@ -1049,18 +1064,47 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
         handoff = parse_handoff(text)
         if handoff:
             break
-        errors = [e for e in events if e.get("type") == "error"]
-        if attempt <= args.retries:
-            time.sleep(args.backoff * attempt if (stalled or errors or not events) else 0)
-            # Resume the same session when it got going; otherwise start the turn again.
-            prompt = ("Continue where you stopped." if stalled else "Your reply had no HANDOFF block.") if session else args.prompt
+        errors = " ".join(json.dumps(e.get("error")) for e in events if e.get("type") == "error")
+        resume = "Continue where you stopped."
+        if "Variant unavailable" in errors and lower_effort(builder, floor) != builder:
+            builder = lower_effort(builder, floor)  # e.g. max -> xhigh does not exist here: step again
+            attempt -= 1
+            prompt = resume if session else args.prompt
+            continue
+        if re.search(r"quota|UsageLimit|Rate limit", errors):
+            # A provider limit is not a builder failure: wait it out instead of spending retries,
+            # stepping the effort down meanwhile (never below the floor; the owner sets it).
+            quota_since = quota_since or time.time()
+            rate_limited = re.search(r'"message": "([^"]+)"', errors)
+            rate_limited = rate_limited.group(1) if rate_limited else "rate limited"
+            if time.time() - quota_since > args.quota_patience:
+                break
+            lowered = lower_effort(builder, floor)
+            append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "delegate.rate_limited",
+                                            "summary": f"{rate_limited}; waiting {args.quota_wait:.0f}s; model {builder}"
+                                                       + (f" -> {lowered}" if lowered != builder else ""), "ref": reference})
+            builder = lowered
+            time.sleep(args.quota_wait)
+            attempt -= 1
+            prompt = resume if session else args.prompt
+            continue
+        rate_limited = ""
+        if attempt > args.retries:
+            break
+        time.sleep(args.backoff * attempt if (stalled or errors or not events) else 0)
+        # Resume the same session when it got going; otherwise start the turn again.
+        prompt = (resume if stalled else "Your reply had no HANDOFF block.") if session else args.prompt
     stats = (f"attempts {attempt} | steps {totals['steps']} | tokens in {totals['input']} out {totals['output']} "
              f"cache-read {totals['cache']} | cost {totals['cost']:.4f} | {time.time() - started:.0f}s")
     print(f"delegate session {session} | {stats}")
     fields = handoff[0] if handoff else {}
     task = fields.get("task", "-") if re.fullmatch(TASK_ID, fields.get("task", "")) else "-"
+    status = fields.get("status") or ("RATE-LIMITED" if rate_limited else "NO-HANDOFF")
     append_jsonl(workspace.events, {"ts": now(), "task": task, "kind": "delegate.done",
-                                    "summary": f"{fields.get('status', 'NO-HANDOFF')} | session {session} | {stats}", "ref": reference})
+                                    "summary": f"{status} | session {session} | {stats}", "ref": reference})
+    if rate_limited and handoff is None:
+        print(f"RATE-LIMITED: {rate_limited}. Waited {args.quota_patience:.0f}s; resume later with --session {session}.")
+        return 3
     if handoff is None:
         print("no valid HANDOFF block. Last reply lines:")
         print("\n".join(text.strip().splitlines()[-15:]) or "(no reply)")
@@ -1100,6 +1144,9 @@ def main(argv: list[str] | None = None) -> int:
     delegate.add_argument("--first", type=float, default=240, help="seconds to wait for the first event")
     delegate.add_argument("--idle", type=float, default=1200, help="seconds of silence before a retry")
     delegate.add_argument("--backoff", type=float, default=30)
+    delegate.add_argument("--quota-wait", type=float, default=900, help="seconds between probes while rate-limited")
+    delegate.add_argument("--quota-patience", type=float, default=6 * 3600, help="give up (exit 3) after this long")
+    delegate.add_argument("--effort-floor", choices=EFFORT_LADDER, help="lowest effort a rate limit may step down to")
     delegate.add_argument("--opencode", default="opencode", help=argparse.SUPPRESS)
     verify = sub.add_parser("verify")
     verify.add_argument("task")

@@ -46,6 +46,11 @@ the result like any other HANDOFF. Delegate exactly one task per builder session
   editing code yourself.
 - **PARTIAL** at a gate: go to step 5.
 - **DONE**: go to step 3.
+- **RATE-LIMITED** (exit code 3): the provider's limit outlasted `--quota-patience` (6 h by
+  default). While it waits, `delegate` probes every 15 min and steps a `#variant` effort down,
+  never below `effort_floor` in `dragonhoard.json` (default `high`). It logs each wait as
+  `delegate.rate_limited`. Tell the owner, and offer a different builder model through
+  `/dragonhoard:models`; never switch on your own. Resume with `--session <id>`.
 - **No HANDOFF** after its retries: run `delegate "Report where you are. End with the HANDOFF block." --session <id>`
   once. If that also fails, count it as a failed attempt (step 4).
 
