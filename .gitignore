@@ -2,3 +2,4 @@ __pycache__/
 evals/kart-racer/sessions/
 evals/kart-racer/audit.jsonl
 evals/kart-racer/gates/*/rea-static.json
+*:Zone.Identifier

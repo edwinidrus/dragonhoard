@@ -1,12 +1,13 @@
 # dragonhoard
 
-```text
-   \/        \/
-   (\   ^^   /)     dragonhoard
-    \ ( oo ) /~*    plan . explore . verify . build . test . record
-     (__vv__)       one task at a time, learning as it goes
-      /|  |\
-```
+<p align="center">
+  <img src="docs/dragonhoard.jpg" alt="A cute green dragon sitting on its treasure hoard of gold coins and gems" width="720">
+</p>
+
+<p align="center">
+  <b>plan · explore · verify · build · test · record</b><br>
+  one task at a time, learning as it goes
+</p>
 
 **A coding agent that gets better at your project with every task, and never changes how it
 works without your sign-off.**
