@@ -5,8 +5,8 @@
 # Transcripts land in sessions/ next to this script; the builder never sees them.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-game=/home/edwinidrus/hobbys/dragonhoard_test
-plugin=/home/edwinidrus/hobbys/dragonhoard_trial_plugin
+game=~/hobbys/dragonhoard_test
+plugin=~/hobbys/dragonhoard_trial_plugin
 mkdir -p "$here/sessions"
 if [ "$1" = new ]; then id=$(python3 -c 'import uuid; print(uuid.uuid4())'); session=(--session-id "$id")
 else id=$1; session=(--resume "$id"); fi
