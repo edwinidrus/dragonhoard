@@ -950,31 +950,38 @@ def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
         print(f"{'PASS' if ok else 'FAIL'}  {name}: {detail}")
     failed = [name for name, ok, _ in results if not ok]
     print(f"verify: {'FAIL' if failed else 'PASS'} | {args.task} | {len(failed)} failed")
+    append_jsonl(workspace.events, {"ts": now(), "task": args.task, "kind": "verify.failed" if failed else "verify.passed",
+                                    "summary": "; ".join(failed) or "all checks", "ref": f"base {args.base}"})
     return 1 if failed else 0
 
 
-def run_events(command: list[str], cwd: Path, first: float, idle: float) -> tuple[list[dict[str, Any]], bool]:
-    """Run a JSON-lines command; kill it when it stays silent too long. Returns (events, stalled)."""
+def run_events(command: list[str], cwd: Path, first: float, idle: float, log: Path) -> tuple[list[dict[str, Any]], bool]:
+    """Run a JSON-lines command, appending each line to `log` as it arrives; kill it when it stays
+    silent too long. Returns (events, stalled)."""
     proc = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
     assert proc.stdout is not None
     selector = selectors.DefaultSelector()
     selector.register(proc.stdout, selectors.EVENT_READ)
     events: list[dict[str, Any]] = []
     buffer = b""
-    while True:
-        if not selector.select(timeout=idle if events else first):
-            proc.kill()
-            proc.wait()
-            return events, True
-        chunk = os.read(proc.stdout.fileno(), 65536)
-        if not chunk:
-            break
-        *lines, buffer = (buffer + chunk).split(b"\n")
-        for line in lines:
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
+    with log.open("ab") as sink:
+        while True:
+            if not selector.select(timeout=idle if events else first):
+                proc.kill()
+                proc.wait()
+                sink.write(json.dumps({"type": "delegate.stalled", "ts": now()}).encode() + b"\n")
+                return events, True
+            chunk = os.read(proc.stdout.fileno(), 65536)
+            if not chunk:
+                break
+            *lines, buffer = (buffer + chunk).split(b"\n")
+            for line in lines:
+                sink.write(line + b"\n")
+                sink.flush()  # live: a crash or a kill never loses what already happened
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
     proc.wait()
     return events, False
 
@@ -1013,13 +1020,18 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     session, prompt, started = args.session, args.prompt, time.time()
     totals = {"steps": 0, "input": 0, "output": 0, "cache": 0, "cost": 0.0}
     handoff, text = None, ""
+    log = folder / f"{now().replace(':', '').replace('+0000', 'Z')}-{(session or 'new')[-8:]}.jsonl"
+    reference = log.relative_to(workspace.root).as_posix()
+    append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "delegate.started",
+                                    "summary": f"{builder}: {args.prompt[:100]}", "ref": reference})
     for attempt in range(1, args.retries + 2):
         command = [args.opencode, "run", "--format", "json", "-m", builder,
                    *(["-s", session] if session else []), prompt + HANDOFF_ASK]
-        events, stalled = run_events(command, workspace.project, args.first, args.idle)
+        with log.open("a") as sink:
+            sink.write(json.dumps({"type": "delegate.attempt", "ts": now(), "attempt": attempt, "session": session,
+                                   "prompt": prompt}) + "\n")
+        events, stalled = run_events(command, workspace.project, args.first, args.idle, log)
         session = session or next((e.get("sessionID") for e in events if e.get("sessionID")), None)
-        stamp = now().replace(":", "").replace("+0000", "Z")
-        (folder / f"{stamp}-{(session or 'none')[-8:]}.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
         for event in events:
             part = event.get("part") or {}
             if event.get("type") == "step_finish":
@@ -1038,8 +1050,13 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
             time.sleep(args.backoff * attempt if (stalled or errors or not events) else 0)
             # Resume the same session when it got going; otherwise start the turn again.
             prompt = ("Continue where you stopped." if stalled else "Your reply had no HANDOFF block.") if session else args.prompt
-    print(f"delegate session {session} | attempts {attempt} | steps {totals['steps']} | tokens in {totals['input']} "
-          f"out {totals['output']} cache-read {totals['cache']} | cost {totals['cost']:.4f} | {time.time() - started:.0f}s")
+    stats = (f"attempts {attempt} | steps {totals['steps']} | tokens in {totals['input']} out {totals['output']} "
+             f"cache-read {totals['cache']} | cost {totals['cost']:.4f} | {time.time() - started:.0f}s")
+    print(f"delegate session {session} | {stats}")
+    fields = handoff[0] if handoff else {}
+    task = fields.get("task", "-") if re.fullmatch(TASK_ID, fields.get("task", "")) else "-"
+    append_jsonl(workspace.events, {"ts": now(), "task": task, "kind": "delegate.done",
+                                    "summary": f"{fields.get('status', 'NO-HANDOFF')} | session {session} | {stats}", "ref": reference})
     if handoff is None:
         print("no valid HANDOFF block. Last reply lines:")
         print("\n".join(text.strip().splitlines()[-15:]) or "(no reply)")

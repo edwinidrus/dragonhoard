@@ -214,11 +214,11 @@ n = len(calls.read_text().splitlines()) if calls.exists() else 0
 with calls.open("a") as log:
     log.write(" ".join(sys.argv[1:]).split("---")[0].replace(chr(10), " ") + chr(10))
 behaviour = plan[min(n, len(plan) - 1)]
-if behaviour == "hang":
-    time.sleep(30)
 def emit(kind, **part):
     print(json.dumps({"type": kind, "sessionID": "ses_stub1234", "part": part}), flush=True)
 emit("step_start")
+if behaviour == "hang":
+    time.sleep(30)
 emit("step_finish", tokens={"input": 10, "output": 5, "reasoning": 1, "cache": {"read": 100}}, cost=0)
 text = "built it" if behaviour == "nohandoff" else "built it\\nHANDOFF\\nstatus: DONE\\ntask: M1-T01\\nfiles: src/a.js\\nchecks: npm test pass\\nquestions: none\\njudge: none\\nrisks: none"
 emit("text", text=text)
@@ -296,9 +296,15 @@ def test_hybrid(tmp: Path) -> None:
                     "--first", "1", "--idle", "1", "--backoff", "0")
     calls = (stub_dir / "calls.txt").read_text().splitlines()
     assert code == 0 and "attempts 3" in out and "status: DONE" in out and "built it" not in out, out
-    assert "-s" not in calls[1] and "-s ses_stub1234" in calls[2] and "no HANDOFF" in calls[2], calls
+    assert "-s ses_stub1234" in calls[1] and "Continue where you stopped" in calls[1], calls  # stalled after start
+    assert "-s ses_stub1234" in calls[2] and "no HANDOFF" in calls[2], calls
     assert "opencode/free-x" in calls[0] and "/dragonhoard-next" in calls[0]
-    assert len(list((tmp / "impl/logs/sessions").glob("*.jsonl"))) >= 2
+    logs = list((tmp / "impl/logs/sessions").glob("*.jsonl"))
+    assert len(logs) == 1 and "delegate.stalled" in logs[0].read_text()  # streamed live, one file per delegate
+    assert logs[0].read_text().count("delegate.attempt") == 3
+    events = (tmp / "impl/logs/events.jsonl").read_text()
+    assert "delegate.started" in events and '"task": "M1-T01", "kind": "delegate.done"' in events
+    assert "verify.passed" in events and "verify.failed" in events
     assert (tmp / "impl/logs/sessions/.gitignore").read_text() == "*\n"
     (stub_dir / "script.txt").write_text("nohandoff")
     code, out = run("--project", str(tmp), "delegate", "x", "--opencode", str(stub), "--retries", "1", "--backoff", "0")
