@@ -15,5 +15,5 @@ for g, st in re.findall(r"^\| *(G\d+) *\| *([^|]+?) *\|", status, re.M):
     rows.append({"kind": "gate", "id": g, "milestone": m, "milestone_name": names.get(m, ""), "title": f"Gate {g}",
                  "status": "PASSED" if st.startswith("PASSED") else "TODO", "phase": "base game" if int(g[1:]) <= 6 else "improvements"})
 # Planned work outside STATUS.md: one row, so it shows without inventing task counts.
-rows.append({"kind": "planned", "id": "VERDICT", "milestone": "END", "milestone_name": "verdict report", "title": "Trial verdict report and scorecard", "status": "PLANNED", "phase": "verdict"})
+rows.append({"kind": "planned", "id": "VERDICT", "milestone": "END", "milestone_name": "verdict report", "title": "Short close-out: scorecard verdict and README (owner closed the trial 2026-10-27)", "status": "DONE", "phase": "verdict"})
 json.dump({"generated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "rows": rows}, sys.stdout, indent=1)
