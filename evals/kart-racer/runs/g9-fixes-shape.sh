@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# G9 review fix tasks: shape them (the builder stops with QUESTION for owner approval).
+G=/home/edwinidrus/hobbys/dragonhoard_planing/evals/kart-racer
+cli=/home/edwinidrus/hobbys/dragonhoard_trial_plugin_b/scripts/dragonhoard.py
+here=$G; game=/home/edwinidrus/hobbys/dragonhoard_test
+cd "$game"
+eval "$(sed -n '/^PRIMARY=/,/^}$/p' "$G/loop.sh")"   # deleg(): Sol with the DeepSeek fallback
+deleg "Use the dragonhoard-shape skill for M9 review fixes. The G9 code review is in implementation/M9-music-sound/REVIEW-G9.md (10 numbered findings). Owner triage: FIX the bug 1, risks 2-5, test gaps 6-8, question 9 (no drift screech while the player is airborne; the engine hum continues) and question 10 in part: a theme change clears only the theme's voices, so effects and continuous voices are never cut. KEEP AS DESIGNED, no task: the phrase restart at bar 0 at the final-lap crossing (the approved T03 anchor), and mute still clears everything. Append fix tasks to M9 starting at M9-T06, grouped by file so each pack stays small: suggested (a) unlock and lifecycle in audio.js: 1, 3 and 4, with a smoke test that presses Escape first and then a real key, and a guarded update; (b) late notes in engine.js: 2, replacing the sequencer.test.js:312 drop assertion with one that a late note starts at currentTime and only a fully past note is skipped (state why this is not test weakening); (c) scheduling gaps: 5; (d) theme-only clearing and airborne screech: 10 and 9; (e) logic test gaps: 6, 7 and 8. Each pack needs a fail-first test for its fix, and a mutation acceptance only where you have checked its premise is observable. Thresholds stay as they are: the 30,000-byte budget, the 300-frame floor and the 0.90 ratio. G9 stays open until they are done. Write the packs and STATUS rows, run dragonhoard.py check, then stop with status QUESTION for owner approval. Don't start a task and don't run the browser suite (the auditor's gate run may still be using port 5173)."
+echo "$out" | sed -n '1,40p'
+echo "shape: end"

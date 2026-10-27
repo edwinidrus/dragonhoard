@@ -1,0 +1,30 @@
+diff --git a/package.json b/package.json
+index 725bff2..62f0366 100644
+--- a/package.json
++++ b/package.json
+@@ -4,7 +4,7 @@
+   "type": "module",
+   "scripts": {
+     "test": "node --test \"test/logic/**/*.test.js\"",
+-    "dev": "vite --port 5173 --strictPort",
++    "dev": "vite --port 5274 --strictPort",
+     "smoke": "playwright test"
+   },
+   "devDependencies": {
+diff --git a/playwright.config.js b/playwright.config.js
+index 8a8d9f6..34af5ed 100644
+--- a/playwright.config.js
++++ b/playwright.config.js
+@@ -2,10 +2,10 @@ import { defineConfig } from '@playwright/test';
+ 
+ export default defineConfig({
+   testDir: 'test/smoke',
+-  use: { baseURL: 'http://localhost:5173' },
++  use: { baseURL: 'http://localhost:5274' },
+   webServer: {
+     command: 'npm run dev',
+-    url: 'http://localhost:5173/',
++    url: 'http://localhost:5274/spike.html',
+     reuseExistingServer: false,
+   },
+ });

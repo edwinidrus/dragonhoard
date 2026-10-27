@@ -43,6 +43,12 @@ def scenario(port: int, wait_ms: int) -> dict[str, Any]:
         "start_url": {"url": f"http://127.0.0.1:{port}/"},
         "actions": [
             {"step_id": "boot", "action": "wait_for_timeout", "duration_ms": wait_ms},
+            # G7+: a track menu comes first; Enter starts the first track (a no-op on older builds).
+            {"step_id": "start", "action": "press", "locator": canvas, "key": "Enter"},
+            # G8+: a racer menu follows; Enter takes the first card (on older builds, Enter mid-countdown is ignored).
+            {"step_id": "racer_menu", "action": "wait_for_timeout", "duration_ms": 400},
+            {"step_id": "racer", "action": "press", "locator": canvas, "key": "Enter"},
+            {"step_id": "countdown", "action": "wait_for_timeout", "duration_ms": wait_ms},
             {"step_id": "accelerate", "action": "press", "locator": canvas, "key": "ArrowUp"},
             {"step_id": "drive", "action": "wait_for_timeout", "duration_ms": 1000},
             {"step_id": "drift", "action": "press", "locator": canvas, "key": "Space"},

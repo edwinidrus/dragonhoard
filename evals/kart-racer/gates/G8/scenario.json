@@ -1,0 +1,85 @@
+{
+  "browser": {
+    "mode": "launch",
+    "executable_path": "/home/edwinidrus/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+  },
+  "start_url": {
+    "url": "http://127.0.0.1:8765/"
+  },
+  "actions": [
+    {
+      "step_id": "boot",
+      "action": "wait_for_timeout",
+      "duration_ms": 4500
+    },
+    {
+      "step_id": "start",
+      "action": "press",
+      "locator": {
+        "kind": "css",
+        "selector": "canvas"
+      },
+      "key": "Enter"
+    },
+    {
+      "step_id": "racer_menu",
+      "action": "wait_for_timeout",
+      "duration_ms": 400
+    },
+    {
+      "step_id": "racer",
+      "action": "press",
+      "locator": {
+        "kind": "css",
+        "selector": "canvas"
+      },
+      "key": "Enter"
+    },
+    {
+      "step_id": "countdown",
+      "action": "wait_for_timeout",
+      "duration_ms": 4500
+    },
+    {
+      "step_id": "accelerate",
+      "action": "press",
+      "locator": {
+        "kind": "css",
+        "selector": "canvas"
+      },
+      "key": "ArrowUp"
+    },
+    {
+      "step_id": "drive",
+      "action": "wait_for_timeout",
+      "duration_ms": 1000
+    },
+    {
+      "step_id": "drift",
+      "action": "press",
+      "locator": {
+        "kind": "css",
+        "selector": "canvas"
+      },
+      "key": "Space"
+    },
+    {
+      "step_id": "settle",
+      "action": "wait_for_timeout",
+      "duration_ms": 1000
+    }
+  ],
+  "capture": {
+    "events": [
+      "console",
+      "page-errors"
+    ],
+    "after_each_step": [
+      "screenshot"
+    ],
+    "at_end": [
+      "url",
+      "dom"
+    ]
+  }
+}

@@ -1,0 +1,1666 @@
+{
+  "port": 5199,
+  "chunks": [
+    {
+      "file": "index.html",
+      "gzip": 370
+    },
+    {
+      "file": "assets/index-DE4e3Oec.js",
+      "gzip": 167207
+    }
+  ],
+  "gzipTotal": 167577,
+  "table": [
+    {
+      "file": "m10-start",
+      "track": "lantern",
+      "calls": 103,
+      "pose": {
+        "position": [
+          -20.000000000000036,
+          4.5,
+          -1.9849181836372534e-14
+        ],
+        "target": [
+          30,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-jump-1",
+      "track": "lantern",
+      "calls": 64,
+      "pose": {
+        "position": [
+          40,
+          5,
+          0
+        ],
+        "target": [
+          62,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-bridge",
+      "track": "lantern",
+      "calls": 74,
+      "pose": {
+        "position": [
+          215.64157758141312,
+          11.317809845049922,
+          -230
+        ],
+        "target": [
+          165.64157758141312,
+          5.611001019288385,
+          -230
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin",
+      "track": "lantern",
+      "calls": 46,
+      "pose": {
+        "position": [
+          -71.8573246530701,
+          7.028503029675594,
+          -86.72326216322256
+        ],
+        "target": [
+          -99.51789600872269,
+          1,
+          -38.43060619565597
+        ]
+      }
+    },
+    {
+      "file": "m10-jump-2",
+      "track": "lantern",
+      "calls": 55,
+      "pose": {
+        "position": [
+          290,
+          9.108257982849999,
+          -95.04425712435727
+        ],
+        "target": [
+          290,
+          4.522971718031911,
+          -125.04425712435727
+        ]
+      }
+    },
+    {
+      "file": "m10-s-bend",
+      "track": "lantern",
+      "calls": 99,
+      "pose": {
+        "position": [
+          115.64157758141312,
+          10.739514194713484,
+          -230.00000000000003
+        ],
+        "target": [
+          74.91681953384044,
+          4.040602189100129,
+          -197.76753298353083
+        ]
+      }
+    },
+    {
+      "file": "m10-landmark",
+      "track": "lantern",
+      "calls": 29,
+      "pose": {
+        "position": [
+          -99.99815906138673,
+          9,
+          -45.40703941595576
+        ],
+        "target": [
+          -319.9976896935515,
+          13,
+          -44.95259290954324
+        ]
+      }
+    },
+    {
+      "file": "m10-start-grid-forward",
+      "track": "lantern",
+      "calls": 83,
+      "pose": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin-exit-forward",
+      "track": "lantern",
+      "calls": 84,
+      "pose": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      }
+    },
+    {
+      "file": "m10-ember-start",
+      "track": "ember",
+      "calls": 79,
+      "pose": {
+        "position": [
+          -20.00000000000002,
+          3.5,
+          -2.206840161011589e-15
+        ],
+        "target": [
+          40,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-ember-corner",
+      "track": "ember",
+      "calls": 80,
+      "pose": {
+        "position": [
+          56.955742875642784,
+          4,
+          -160
+        ],
+        "target": [
+          38,
+          0,
+          -141.80529879718154
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "track": "Lantern Reach",
+      "created": 2,
+      "live": 1,
+      "canvases": 1
+    },
+    {
+      "track": "Ember Circuit",
+      "created": 2,
+      "live": 1,
+      "canvases": 1
+    }
+  ],
+  "details": [
+    {
+      "file": "m10-s-bend-sign-approach",
+      "track": "lantern",
+      "calls": 21,
+      "pose": {
+        "position": [
+          135.0000000000001,
+          8.070903792276376,
+          -230
+        ],
+        "target": [
+          125.00000000000011,
+          7.146735093001185,
+          -238.20000000000002
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin-sign-approach",
+      "track": "lantern",
+      "calls": 21,
+      "pose": {
+        "position": [
+          -35.050100267918936,
+          4.539870014189059,
+          -108.58525596664585
+        ],
+        "target": [
+          -45.07064237926687,
+          3.6386768282503983,
+          -103.62443279075592
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "imageRequests": [],
+  "landmark": {
+    "position": [
+      278.22377661730286,
+      4,
+      62.35289025581935
+    ],
+    "bearing": -0.22433482528644175
+  },
+  "forwardViews": [
+    {
+      "file": "m10-start-grid-forward",
+      "angle": 23.9651597939219,
+      "distance": 297.38146863673853,
+      "fogFraction": 0.4202201333371933,
+      "blockers": 0,
+      "sceneryBlockers": 0,
+      "dressingBlockers": 0,
+      "view": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin-exit-forward",
+      "angle": 22.414147492185986,
+      "distance": 345.9148299256967,
+      "fogFraction": 0.638877625038637,
+      "blockers": 0,
+      "sceneryBlockers": 0,
+      "dressingBlockers": 0,
+      "view": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      }
+    }
+  ],
+  "dressingPlan": {
+    "corners": [
+      {
+        "s0": 220,
+        "s1": 329.9557428756427,
+        "side": -1
+      },
+      {
+        "s0": 220,
+        "s1": 329.9557428756427,
+        "side": 1
+      },
+      {
+        "s0": 444.9557428756427,
+        "s1": 515.6415775814131,
+        "side": -1
+      },
+      {
+        "s0": 444.9557428756427,
+        "s1": 515.6415775814131,
+        "side": 1
+      },
+      {
+        "s0": 655.6415775814131,
+        "s1": 702.76546738526,
+        "side": -1
+      },
+      {
+        "s0": 655.6415775814131,
+        "s1": 702.76546738526,
+        "side": 1
+      },
+      {
+        "s0": 702.76546738526,
+        "s1": 749.8893571891068,
+        "side": -1
+      },
+      {
+        "s0": 702.76546738526,
+        "s1": 749.8893571891068,
+        "side": 1
+      },
+      {
+        "s0": 809.8893571891068,
+        "s1": 841.3052837250048,
+        "side": -1
+      },
+      {
+        "s0": 809.8893571891068,
+        "s1": 841.3052837250048,
+        "side": 1
+      },
+      {
+        "s0": 881.3052837250048,
+        "s1": 912.7212102609027,
+        "side": -1
+      },
+      {
+        "s0": 881.3052837250048,
+        "s1": 912.7212102609027,
+        "side": 1
+      },
+      {
+        "s0": 912.7212102609027,
+        "s1": 1054.0928796724434,
+        "side": -1
+      },
+      {
+        "s0": 912.7212102609027,
+        "s1": 1054.0928796724434,
+        "side": 1
+      }
+    ],
+    "kerb": {
+      "width": 0.38,
+      "stripeLength": 3
+    },
+    "dashes": [
+      {
+        "s": 8,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 16,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 32,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 40,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 48,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 64,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 72,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 80,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 88,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 96,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 104,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 112,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 120,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 128,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 136,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 144,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 152,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 160,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 168,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 176,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 184,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 192,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 200,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 208,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 216,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 224,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 232,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 240,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 248,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 256,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 264,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 272,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 280,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 288,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 296,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 304,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 312,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 320,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 328,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 336,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 344,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 352,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 360,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 368,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 384,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 392,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 408,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 416,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 424,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 432,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 440,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 448,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 456,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 464,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 472,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 480,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 488,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 496,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 504,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 512,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 520,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 528,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 536,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 544,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 552,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 592,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 600,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 608,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 624,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 632,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 640,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 648,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 656,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 664,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 672,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 680,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 688,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 696,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 704,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 712,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 720,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 728,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 736,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 744,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 752,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 760,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 768,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 776,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 784,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 792,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 800,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 808,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 816,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 824,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 832,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 840,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 848,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 856,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 880,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 888,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 896,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 904,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 912,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 920,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 928,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 936,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 944,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 952,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 960,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 968,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 976,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 984,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 992,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1000,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1008,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1016,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1024,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1032,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1040,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1048,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1056,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1064,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1072,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1080,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1088,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1096,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      },
+      {
+        "s": 1104,
+        "lateral": 0,
+        "length": 1.6,
+        "width": 0.16
+      }
+    ],
+    "arch": {
+      "s": 0,
+      "posts": [
+        {
+          "lateral": -7.5,
+          "width": 0.18,
+          "height": 5.6
+        },
+        {
+          "lateral": 7.5,
+          "width": 0.18,
+          "height": 5.6
+        }
+      ],
+      "banner": {
+        "text": "Lantern Reach",
+        "width": 13.8,
+        "height": 0.65,
+        "bottom": 4.85,
+        "background": "#1b1240",
+        "foreground": "#fff1c1",
+        "canvasWidth": 1024,
+        "canvasHeight": 64
+      }
+    },
+    "signs": [
+      {
+        "s": 635.6415775814131,
+        "lateral": -8.2,
+        "bearing": 3.141592653589793,
+        "label": "left",
+        "width": 1.2,
+        "height": 0.7
+      },
+      {
+        "s": 892.7212102609027,
+        "lateral": -8.2,
+        "bearing": -2.1415926535897998,
+        "label": "left",
+        "width": 1.2,
+        "height": 0.7
+      }
+    ]
+  },
+  "newTriangles": 2520,
+  "smoke": {
+    "runs": [
+      {
+        "run": 1,
+        "command": "npm run smoke",
+        "log": "dist/m10-t06/final-smoke-1.log",
+        "exitCode": 0,
+        "samples": [
+          {
+            "baseline": false,
+            "frames": 311,
+            "seconds": 10.012200000000187,
+            "fps": 31.062104232835363,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              9,
+              7,
+              8,
+              11
+            ],
+            "distance": 205.71068075695015,
+            "before": {
+              "x": -0.7472222222222562,
+              "y": 2.5000000000000164,
+              "speed": 10.166666666666664,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 204.9634585347279,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 204.9634585347279,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 162.22345853472675,
+                "y": -2.4999999999999982,
+                "speed": 16.85000000000024,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.39032184418394,
+                "y": 0.000016652378286135637,
+                "speed": 17.99880296864227,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 168.69547745084068,
+                "y": 2.4999985479554008,
+                "speed": 18.18387325638179,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          },
+          {
+            "baseline": true,
+            "frames": 308,
+            "seconds": 10.03030000000028,
+            "fps": 30.70695791750909,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              7,
+              7,
+              7,
+              7
+            ],
+            "distance": 206.20512520139462,
+            "before": {
+              "x": -0.575000000000034,
+              "y": 2.5000000000000164,
+              "speed": 10.33333333333333,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 205.63012520139458,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 205.63012520139458,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 162.78568075694898,
+                "y": -2.4999999999999982,
+                "speed": 16.95000000000024,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.9904208320276,
+                "y": 0.000016443055565775273,
+                "speed": 18.073802968640376,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 169.30299544827304,
+                "y": 2.5000003482562994,
+                "speed": 18.333873256378197,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          }
+        ],
+        "frames": 311,
+        "ratio": 1.0115656626188871
+      },
+      {
+        "run": 2,
+        "command": "npm run smoke",
+        "log": "dist/m10-t06/final-smoke-2.log",
+        "exitCode": 0,
+        "samples": [
+          {
+            "baseline": false,
+            "frames": 335,
+            "seconds": 10.014900000000372,
+            "fps": 33.45015926269733,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              9,
+              7,
+              8,
+              11
+            ],
+            "distance": 205.71068075695015,
+            "before": {
+              "x": -0.7472222222222562,
+              "y": 2.5000000000000164,
+              "speed": 10.166666666666664,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 204.9634585347279,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 204.9634585347279,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 162.22345853472675,
+                "y": -2.4999999999999982,
+                "speed": 16.85000000000024,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.39032184418394,
+                "y": 0.000016652378286135637,
+                "speed": 17.99880296864227,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 168.69547745084068,
+                "y": 2.4999985479554008,
+                "speed": 18.18387325638179,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          },
+          {
+            "baseline": true,
+            "frames": 307,
+            "seconds": 10.013399999999907,
+            "fps": 30.658917051151743,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              7,
+              7,
+              7,
+              7
+            ],
+            "distance": 205.71068075695015,
+            "before": {
+              "x": -0.7472222222222562,
+              "y": 2.5000000000000164,
+              "speed": 10.166666666666664,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 204.9634585347279,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 204.9634585347279,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 162.22345853472675,
+                "y": -2.4999999999999982,
+                "speed": 16.85000000000024,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.39032184418394,
+                "y": 0.000016652378286135637,
+                "speed": 17.99880296864227,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 168.69547745084068,
+                "y": 2.4999985479554008,
+                "speed": 18.18387325638179,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          }
+        ],
+        "frames": 335,
+        "ratio": 1.0910417744660923
+      },
+      {
+        "run": 3,
+        "command": "npm run smoke",
+        "log": "dist/m10-t06/final-smoke-3.log",
+        "exitCode": 0,
+        "samples": [
+          {
+            "baseline": false,
+            "frames": 332,
+            "seconds": 10.009,
+            "fps": 33.170146867818964,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              9,
+              7,
+              8,
+              11
+            ],
+            "distance": 206.0440140902835,
+            "before": {
+              "x": -0.7472222222222562,
+              "y": 2.5000000000000164,
+              "speed": 10.166666666666664,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 205.29679186806123,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 205.29679186806123,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 162.22345853472675,
+                "y": -2.4999999999999982,
+                "speed": 16.85000000000024,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.39032184418394,
+                "y": 0.000016652378286135637,
+                "speed": 17.99880296864227,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 168.69547745084068,
+                "y": 2.4999985479554008,
+                "speed": 18.18387325638179,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          },
+          {
+            "baseline": true,
+            "frames": 299,
+            "seconds": 10.021,
+            "fps": 29.837341582676377,
+            "ids": [
+              "wren",
+              "cinder",
+              "hyguana",
+              "pip"
+            ],
+            "models": [
+              7,
+              7,
+              7,
+              7
+            ],
+            "distance": 205.8801252013946,
+            "before": {
+              "x": -0.9166666666667006,
+              "y": 2.5000000000000164,
+              "speed": 9.999999999999998,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000013,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "after": {
+              "x": 204.9634585347279,
+              "y": 2.5000000000000164,
+              "speed": 20,
+              "lap": 0,
+              "racer": "wren",
+              "lateral": 2.5000000000000164,
+              "driftCharge": 0,
+              "boosting": false,
+              "item": false
+            },
+            "karts": [
+              {
+                "x": 204.9634585347279,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren"
+              },
+              {
+                "x": 161.9426252013934,
+                "y": -2.4999999999999982,
+                "speed": 16.916666666666906,
+                "lap": 0,
+                "racer": "cinder"
+              },
+              {
+                "x": 165.09034179470652,
+                "y": 0.00001671029315869045,
+                "speed": 18.065469635310038,
+                "lap": 0,
+                "racer": "hyguana"
+              },
+              {
+                "x": 168.39241289656908,
+                "y": 2.4999975931192853,
+                "speed": 18.25053992305021,
+                "lap": 0,
+                "racer": "pip"
+              }
+            ]
+          }
+        ],
+        "frames": 332,
+        "ratio": 1.1116991363291433
+      }
+    ],
+    "frames": [
+      311,
+      335,
+      332
+    ],
+    "median": 332,
+    "target": {
+      "floor": 300,
+      "ratio": 0.9,
+      "median": 315
+    },
+    "passed": true
+  },
+  "status": "JUDGE: automated checks pass; eleven production views require external judge before commit"
+}

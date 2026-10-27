@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>spike (b): four live canvas previews</title>
+    <style>
+      /* ponytail: throwaway spike styling, not the shipped menu. */
+      body { margin: 0; background: #111; color: #eee; font: 14px system-ui; }
+      #racer-menu { position: fixed; inset: 0; background: #1b1b22; display: none; }
+      #racer-menu[data-open='true'] { display: block; }
+      #racer-menu-cards { display: flex; gap: 12px; padding: 24px; }
+      .card { width: 180px; padding: 8px; background: #26262f; border: 2px solid #444; }
+      .card[data-selected='true'] { border-color: #ffd75e; }
+      .card canvas { display: block; width: 160px; height: 160px; }
+      .bar { height: 8px; margin: 3px 0; background: #ffd75e; } /* fixed width, set inline */
+    </style>
+  </head>
+  <body>
+    <div id="racer-menu">
+      <div id="racer-menu-cards"></div>
+    </div>
+    <script type="module">
+      import { RACERS } from './src/logic/racers.js';
+      import { createKartMesh } from './src/render/kartMesh.js';
+      import * as THREE from 'three';
+
+      // Option (b): one live WebGLRenderer per card, each rendering that racer's own mesh, slowly
+      // turning. Everything is built once; show()/hide() only toggle visibility and the rAF loop,
+      // so re-entering the menu creates no new WebGL contexts.
+      const menu = document.getElementById('racer-menu');
+      const cards = document.getElementById('racer-menu-cards');
+      const glWrappers = []; // one { renderer, scene, camera, kart }
+      let raf = 0;
+      let t = 0;
+
+      const buildStart = performance.now();
+      for (const racer of RACERS) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.racer = racer.id;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 160;
+        card.append(canvas);
+
+        const name = document.createElement('div');
+        name.dataset.name = racer.name;
+        name.textContent = racer.name;
+        const klass = document.createElement('div');
+        klass.dataset.class = racer.klass;
+        klass.textContent = racer.klass;
+        card.append(name, klass);
+
+        for (const stat of ['speed', 'accel', 'handling']) {
+          const bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.dataset.stat = stat;
+          bar.style.width = '120px'; // ponytail: fixed width; the shipped menu would scale it by tuning
+          card.append(bar);
+        }
+        cards.append(card);
+
+        const renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          preserveDrawingBuffer: true, // so a test can read the pixels back
+        });
+        renderer.setPixelRatio(1);
+        renderer.setSize(160, 160, false);
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x2a2a35);
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 3));
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        camera.position.set(3.2, 2.2, 3.2);
+        camera.lookAt(0, 0.55, 0);
+        const kart = createKartMesh(racer);
+        scene.add(kart);
+        renderer.render(scene, camera);
+        glWrappers.push({ renderer, scene, camera, kart, card });
+      }
+      const buildMs = performance.now() - buildStart;
+
+      function tick() {
+        raf = requestAnimationFrame(tick);
+        t += 0.01; // slow turn
+        for (const g of glWrappers) {
+          g.kart.rotation.y = t;
+          g.renderer.render(g.scene, g.camera);
+        }
+        api.frames++;
+      }
+
+      const api = {
+        buildMs,
+        frames: 0,
+        selected: -1,
+        rafRunning: false,
+        show(index) {
+          api.selected = index;
+          glWrappers.forEach((g, i) => {
+            g.card.dataset.selected = String(i === index);
+          });
+          menu.dataset.open = 'true';
+          if (!api.rafRunning) {
+            api.rafRunning = true;
+            tick();
+          }
+        },
+        hide() {
+          if (api.rafRunning) {
+            cancelAnimationFrame(raf);
+            api.rafRunning = false;
+          }
+          menu.dataset.open = 'false';
+        },
+      };
+      window.__spike = api;
+    </script>
+  </body>
+</html>

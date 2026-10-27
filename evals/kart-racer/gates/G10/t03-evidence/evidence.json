@@ -1,0 +1,54 @@
+{
+  "port": 5199,
+  "chunks": [
+    {
+      "file": "index.html",
+      "gzip": 370
+    },
+    {
+      "file": "assets/index-KR5MAAbm.js",
+      "gzip": 155560
+    }
+  ],
+  "gzipTotal": 155930,
+  "drawCalls": {
+    "m10-start": 110,
+    "m10-jump-1": 70,
+    "m10-bridge": 77,
+    "m10-hairpin": 46,
+    "m10-jump-2": 55,
+    "m10-s-bend": 104,
+    "m10-landmark": 42,
+    "m10-sea": 49,
+    "m10-sea-sun": 45,
+    "m10-sea-anti-sun": 43,
+    "m10-fall": 42,
+    "m10-ember-start": 79,
+    "m10-ember-corner": 80
+  },
+  "contexts": {
+    "created": 2,
+    "live": 1,
+    "types": [
+      "webgl2",
+      "webgl2"
+    ],
+    "canvases": 1
+  },
+  "errors": [],
+  "imageRequests": [],
+  "fallLog": [
+    {
+      "phase": "at-sink",
+      "s": 50,
+      "speed": 9.138096429342136,
+      "ticks": 184,
+      "maxSpeed": 16.54524589155698
+    },
+    {
+      "phase": "after-fall",
+      "s": 38,
+      "speed": 0
+    }
+  ]
+}

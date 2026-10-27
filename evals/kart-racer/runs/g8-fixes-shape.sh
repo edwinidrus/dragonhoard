@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# G8 review fix tasks: shape them (the builder stops with QUESTION for owner approval).
+G=/home/edwinidrus/hobbys/dragonhoard_planing/evals/kart-racer
+cli=/home/edwinidrus/hobbys/dragonhoard_trial_plugin_b/scripts/dragonhoard.py
+here=$G; game=/home/edwinidrus/hobbys/dragonhoard_test
+cd "$game"
+eval "$(sed -n '/^PRIMARY=/,/^}$/p' "$G/loop.sh")"   # deleg(): Sol with the DeepSeek fallback
+deleg "Use the dragonhoard-shape skill for M8 review fixes. The G8 code review is in implementation/M8-four-racers/REVIEW-G8.md (17 numbered findings). Owner triage: FIX the bug 1, risks 2, 3 and 4, test gaps 5-11, and questions 15 (move Wren's propeller onto the head as a cap, as the plan says), 16 (mark the player's row on the results screen from row.isPlayer) and 17 (anchor the stat bars to fixed ranges so no racer shows an empty bar; update the pinned bar values). KEEP AS DESIGNED, no task: 12 (Wren keeps average speed; the 4 % balance holds), 13 (the balance protocol stays the rival driver) and 14 (rival skill stays per grid slot). Append fix tasks to M8 starting at M8-T09, grouped by file so each pack stays small: suggested (a) racer models: 1 and 15, with a bounding-box test that every named feature part shows outside the others; (b) the preview bake: 2 and 3 (forceContextLoss after dispose, a fallback when the bake context fails, the smoke test checks the bake context is lost); (c) menu key repeat: 4; (d) results and stat bars: 16, 17 and 10; (e) logic test gaps: 7, 8 and 9; (f) browser test gaps: 5, 6 and 11. In (f) the 300-frame floor stays as it is (never lowered); add the same-run baseline ratio on top of it, and the throttle during the sample. Each pack needs a fail-first test for its fix, and a mutation acceptance only where you've checked its premise is observable. G8 stays PARTIAL until they're done. Write the packs and STATUS rows, run dragonhoard.py check, then stop with status QUESTION for owner approval. Don't start a task."
+echo "$out" | sed -n '1,40p'
+echo "shape: end"

@@ -1,0 +1,90 @@
+{
+  "drawCalls": {
+    "m10-start": {
+      "cloud": 100,
+      "bare": 97,
+      "extra": 3
+    },
+    "m10-jump-1": {
+      "cloud": 71,
+      "bare": 68,
+      "extra": 3
+    },
+    "m10-bridge": {
+      "cloud": 92,
+      "bare": 89,
+      "extra": 3
+    },
+    "m10-hairpin": {
+      "cloud": 47,
+      "bare": 44,
+      "extra": 3
+    },
+    "m10-jump-2": {
+      "cloud": 56,
+      "bare": 53,
+      "extra": 3
+    },
+    "m10-s-bend": {
+      "cloud": 105,
+      "bare": 102,
+      "extra": 3
+    },
+    "m10-landmark": {
+      "cloud": 43,
+      "bare": 40,
+      "extra": 3
+    },
+    "m10-sea": {
+      "cloud": 43,
+      "bare": 40,
+      "extra": 3
+    },
+    "m10-ember-start": {
+      "cloud": 68,
+      "bare": 68,
+      "extra": 0
+    }
+  },
+  "contexts": {
+    "lantern-cloud": {
+      "canvases": 1,
+      "live": 1,
+      "main": 1
+    },
+    "lantern-bare": {
+      "canvases": 1,
+      "live": 1,
+      "main": 1
+    },
+    "ember-cloud": {
+      "canvases": 1,
+      "live": 1,
+      "main": 1
+    },
+    "ember-bare": {
+      "canvases": 1,
+      "live": 1,
+      "main": 1
+    }
+  },
+  "errors": 0,
+  "imageRequests": 0,
+  "chunks": [
+    {
+      "path": "assets/index-DWbUf0yu.js",
+      "bytes": 603992,
+      "gzip": 156252
+    },
+    {
+      "path": "index.html",
+      "bytes": 518,
+      "gzip": 369
+    }
+  ],
+  "gzipJsBytes": 156252,
+  "indexHtmlGzipBytes": 369,
+  "port": 5183,
+  "pass": true,
+  "failures": []
+}

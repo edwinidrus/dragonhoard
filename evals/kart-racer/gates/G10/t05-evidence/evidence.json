@@ -1,0 +1,931 @@
+{
+  "port": 5199,
+  "chunks": [
+    {
+      "file": "index.html",
+      "gzip": 371
+    },
+    {
+      "file": "assets/index-BFXptGj5.js",
+      "gzip": 159158
+    }
+  ],
+  "gzipTotal": 159529,
+  "table": [
+    {
+      "file": "m10-start",
+      "track": "lantern",
+      "calls": 101,
+      "pose": {
+        "position": [
+          -20.000000000000036,
+          4.5,
+          -1.9849181836372534e-14
+        ],
+        "target": [
+          30,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-jump-1",
+      "track": "lantern",
+      "calls": 63,
+      "pose": {
+        "position": [
+          40,
+          5,
+          0
+        ],
+        "target": [
+          62,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-bridge",
+      "track": "lantern",
+      "calls": 63,
+      "pose": {
+        "position": [
+          215.64157758141312,
+          11.317809845049922,
+          -230
+        ],
+        "target": [
+          165.64157758141312,
+          5.611001019288385,
+          -230
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin",
+      "track": "lantern",
+      "calls": 44,
+      "pose": {
+        "position": [
+          -71.8573246530701,
+          7.028503029675594,
+          -86.72326216322256
+        ],
+        "target": [
+          -99.51789600872269,
+          1,
+          -38.43060619565597
+        ]
+      }
+    },
+    {
+      "file": "m10-jump-2",
+      "track": "lantern",
+      "calls": 35,
+      "pose": {
+        "position": [
+          290,
+          9.108257982849999,
+          -95.04425712435727
+        ],
+        "target": [
+          290,
+          4.522971718031911,
+          -125.04425712435727
+        ]
+      }
+    },
+    {
+      "file": "m10-s-bend",
+      "track": "lantern",
+      "calls": 78,
+      "pose": {
+        "position": [
+          115.64157758141312,
+          10.739514194713484,
+          -230.00000000000003
+        ],
+        "target": [
+          74.91681953384044,
+          4.040602189100129,
+          -197.76753298353083
+        ]
+      }
+    },
+    {
+      "file": "m10-landmark",
+      "track": "lantern",
+      "calls": 17,
+      "pose": {
+        "position": [
+          -99.99815906138673,
+          9,
+          -45.40703941595576
+        ],
+        "target": [
+          -319.9976896935515,
+          13,
+          -44.95259290954324
+        ]
+      }
+    },
+    {
+      "file": "m10-start-grid-forward",
+      "track": "lantern",
+      "calls": 66,
+      "pose": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin-exit-forward",
+      "track": "lantern",
+      "calls": 66,
+      "pose": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      }
+    },
+    {
+      "file": "m10-ember-start",
+      "track": "ember",
+      "calls": 79,
+      "pose": {
+        "position": [
+          -20.00000000000002,
+          3.5,
+          -2.206840161011589e-15
+        ],
+        "target": [
+          40,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "file": "m10-ember-corner",
+      "track": "ember",
+      "calls": 80,
+      "pose": {
+        "position": [
+          56.955742875642784,
+          4,
+          -160
+        ],
+        "target": [
+          38,
+          0,
+          -141.80529879718154
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "track": "Lantern Reach",
+      "created": 2,
+      "live": 1,
+      "canvases": 1
+    },
+    {
+      "track": "Ember Circuit",
+      "created": 2,
+      "live": 1,
+      "canvases": 1
+    }
+  ],
+  "errors": [],
+  "imageRequests": [],
+  "landmark": {
+    "position": [
+      278.22377661730286,
+      4,
+      62.35289025581935
+    ],
+    "bearing": -0.22433482528644175
+  },
+  "forwardViews": [
+    {
+      "file": "m10-start-grid-forward",
+      "angle": 23.9651597939219,
+      "distance": 297.38146863673853,
+      "fogFraction": 0.4202201333371933,
+      "blockers": 0,
+      "newBlockers": 0,
+      "view": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      }
+    },
+    {
+      "file": "m10-hairpin-exit-forward",
+      "angle": 22.414147492185986,
+      "distance": 345.9148299256967,
+      "fogFraction": 0.638877625038637,
+      "blockers": 0,
+      "newBlockers": 0,
+      "view": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      }
+    }
+  ],
+  "roadIslands": [
+    {
+      "span": [
+        0,
+        559.999849525571
+      ],
+      "stations": [
+        10,
+        53,
+        31
+      ],
+      "halfWidthRange": [
+        8.750037304056582,
+        8.849999765142895
+      ],
+      "spikes": 8,
+      "trees": 6,
+      "bushes": 6,
+      "rocks": 2
+    },
+    {
+      "span": [
+        589.999849525571,
+        1109.0928796724434
+      ],
+      "stations": [
+        88
+      ],
+      "halfWidthRange": [
+        8.750066763080227,
+        8.849960168593029
+      ],
+      "spikes": 8,
+      "trees": 6,
+      "bushes": 6,
+      "rocks": 2
+    }
+  ],
+  "newTriangles": 4432,
+  "smokeEvidence": {
+    "log": "dist/m10-t05/headroom-smoke-1.log",
+    "samples": [
+      {
+        "baseline": false,
+        "frames": 245,
+        "seconds": 10.034,
+        "fps": 24.416982260314928,
+        "ids": [
+          "wren",
+          "cinder",
+          "hyguana",
+          "pip"
+        ],
+        "models": [
+          9,
+          7,
+          8,
+          11
+        ],
+        "distance": 206.0440140902835,
+        "before": {
+          "x": -0.7472222222222562,
+          "y": 2.5000000000000164,
+          "speed": 10.166666666666664,
+          "lap": 0,
+          "racer": "wren",
+          "lateral": 2.5000000000000013,
+          "driftCharge": 0,
+          "boosting": false,
+          "item": false
+        },
+        "after": {
+          "x": 205.29679186806123,
+          "y": 2.5000000000000164,
+          "speed": 20,
+          "lap": 0,
+          "racer": "wren",
+          "lateral": 2.5000000000000164,
+          "driftCharge": 0,
+          "boosting": false,
+          "item": false
+        },
+        "karts": [
+          {
+            "x": 205.29679186806123,
+            "y": 2.5000000000000164,
+            "speed": 20,
+            "lap": 0,
+            "racer": "wren"
+          },
+          {
+            "x": 162.50318075694898,
+            "y": -2.4999999999999982,
+            "speed": 16.783333333333573,
+            "lap": 0,
+            "racer": "cinder"
+          },
+          {
+            "x": 165.68919078255024,
+            "y": 0.000016563997346792112,
+            "speed": 17.932136301974605,
+            "lap": 0,
+            "racer": "hyguana"
+          },
+          {
+            "x": 168.99743089400127,
+            "y": 2.4999994629531264,
+            "speed": 18.117206589713337,
+            "lap": 0,
+            "racer": "pip"
+          }
+        ]
+      },
+      {
+        "baseline": true,
+        "frames": 237,
+        "seconds": 10.02029999999702,
+        "fps": 23.651986467478068,
+        "ids": [
+          "wren",
+          "cinder",
+          "hyguana",
+          "pip"
+        ],
+        "models": [
+          7,
+          7,
+          7,
+          7
+        ],
+        "distance": 205.53845853472794,
+        "before": {
+          "x": -0.575000000000034,
+          "y": 2.5000000000000164,
+          "speed": 10.33333333333333,
+          "lap": 0,
+          "racer": "wren",
+          "lateral": 2.5000000000000013,
+          "driftCharge": 0,
+          "boosting": false,
+          "item": false
+        },
+        "after": {
+          "x": 204.9634585347279,
+          "y": 2.5000000000000164,
+          "speed": 20,
+          "lap": 0,
+          "racer": "wren",
+          "lateral": 2.5000000000000164,
+          "driftCharge": 0,
+          "boosting": false,
+          "item": false
+        },
+        "karts": [
+          {
+            "x": 204.9634585347279,
+            "y": 2.5000000000000164,
+            "speed": 20,
+            "lap": 0,
+            "racer": "wren"
+          },
+          {
+            "x": 162.22345853472675,
+            "y": -2.4999999999999982,
+            "speed": 16.85000000000024,
+            "lap": 0,
+            "racer": "cinder"
+          },
+          {
+            "x": 165.39032184418394,
+            "y": 0.000016652378286135637,
+            "speed": 17.99880296864227,
+            "lap": 0,
+            "racer": "hyguana"
+          },
+          {
+            "x": 168.69547745084068,
+            "y": 2.4999985479554008,
+            "speed": 18.18387325638179,
+            "lap": 0,
+            "racer": "pip"
+          }
+        ]
+      }
+    ],
+    "ratio": 1.0323438284513118,
+    "headroom": -55,
+    "fullSuitePassed": false,
+    "headroomSeries": {
+      "runs": [
+        {
+          "run": 1,
+          "command": "npm run smoke",
+          "log": "dist/m10-t05/headroom-smoke-1.log",
+          "exitCode": 1,
+          "samples": [
+            {
+              "baseline": false,
+              "frames": 245,
+              "seconds": 10.034,
+              "fps": 24.416982260314928,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                9,
+                7,
+                8,
+                11
+              ],
+              "distance": 206.0440140902835,
+              "before": {
+                "x": -0.7472222222222562,
+                "y": 2.5000000000000164,
+                "speed": 10.166666666666664,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 205.29679186806123,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 205.29679186806123,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.50318075694898,
+                  "y": -2.4999999999999982,
+                  "speed": 16.783333333333573,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.68919078255024,
+                  "y": 0.000016563997346792112,
+                  "speed": 17.932136301974605,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 168.99743089400127,
+                  "y": 2.4999994629531264,
+                  "speed": 18.117206589713337,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            },
+            {
+              "baseline": true,
+              "frames": 237,
+              "seconds": 10.02029999999702,
+              "fps": 23.651986467478068,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                7,
+                7,
+                7,
+                7
+              ],
+              "distance": 205.53845853472794,
+              "before": {
+                "x": -0.575000000000034,
+                "y": 2.5000000000000164,
+                "speed": 10.33333333333333,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 204.9634585347279,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 204.9634585347279,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.22345853472675,
+                  "y": -2.4999999999999982,
+                  "speed": 16.85000000000024,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.39032184418394,
+                  "y": 0.000016652378286135637,
+                  "speed": 17.99880296864227,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 168.69547745084068,
+                  "y": 2.4999985479554008,
+                  "speed": 18.18387325638179,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            }
+          ],
+          "frames": 245,
+          "ratio": 1.0323438284513118
+        },
+        {
+          "run": 2,
+          "command": "npm run smoke",
+          "log": "dist/m10-t05/headroom-smoke-2.log",
+          "exitCode": 1,
+          "samples": [
+            {
+              "baseline": false,
+              "frames": 232,
+              "seconds": 10.01759999999404,
+              "fps": 23.159239738074792,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                9,
+                7,
+                8,
+                11
+              ],
+              "distance": 205.54679186806126,
+              "before": {
+                "x": -0.9166666666667006,
+                "y": 2.5000000000000164,
+                "speed": 9.999999999999998,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 204.63012520139455,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 204.63012520139455,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.22345853472675,
+                  "y": -2.4999999999999982,
+                  "speed": 16.85000000000024,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.39032184418394,
+                  "y": 0.000016652378286135637,
+                  "speed": 17.99880296864227,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 168.69547745084068,
+                  "y": 2.4999985479554008,
+                  "speed": 18.18387325638179,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            },
+            {
+              "baseline": true,
+              "frames": 214,
+              "seconds": 10.014699999988078,
+              "fps": 21.368588175407627,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                7,
+                7,
+                7,
+                7
+              ],
+              "distance": 205.69679186806127,
+              "before": {
+                "x": -0.4000000000000341,
+                "y": 2.5000000000000164,
+                "speed": 10.499999999999996,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 205.29679186806123,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 205.29679186806123,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.22345853472675,
+                  "y": -2.4999999999999982,
+                  "speed": 16.85000000000024,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.39032184418394,
+                  "y": 0.000016652378286135637,
+                  "speed": 17.99880296864227,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 168.69547745084068,
+                  "y": 2.4999985479554008,
+                  "speed": 18.18387325638179,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            }
+          ],
+          "frames": 232,
+          "ratio": 1.0837983093673902
+        },
+        {
+          "run": 3,
+          "command": "npm run smoke",
+          "log": "dist/m10-t05/headroom-smoke-3.log",
+          "exitCode": 1,
+          "samples": [
+            {
+              "baseline": false,
+              "frames": 211,
+              "seconds": 10.054399999991059,
+              "fps": 20.98583704648588,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                9,
+                7,
+                8,
+                11
+              ],
+              "distance": 206.21345853472795,
+              "before": {
+                "x": -0.9166666666667006,
+                "y": 2.5000000000000164,
+                "speed": 9.999999999999998,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 205.29679186806123,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 205.29679186806123,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.78568075694898,
+                  "y": -2.4999999999999982,
+                  "speed": 16.95000000000024,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.9904208320276,
+                  "y": 0.000016443055565775273,
+                  "speed": 18.073802968640376,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 169.30299544827304,
+                  "y": 2.5000003482562994,
+                  "speed": 18.333873256378197,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            },
+            {
+              "baseline": true,
+              "frames": 220,
+              "seconds": 10.042199999988078,
+              "fps": 21.90755013844189,
+              "ids": [
+                "wren",
+                "cinder",
+                "hyguana",
+                "pip"
+              ],
+              "models": [
+                7,
+                7,
+                7,
+                7
+              ],
+              "distance": 206.21345853472795,
+              "before": {
+                "x": -0.9166666666667006,
+                "y": 2.5000000000000164,
+                "speed": 9.999999999999998,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000013,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "after": {
+                "x": 205.29679186806123,
+                "y": 2.5000000000000164,
+                "speed": 20,
+                "lap": 0,
+                "racer": "wren",
+                "lateral": 2.5000000000000164,
+                "driftCharge": 0,
+                "boosting": false,
+                "item": false
+              },
+              "karts": [
+                {
+                  "x": 205.29679186806123,
+                  "y": 2.5000000000000164,
+                  "speed": 20,
+                  "lap": 0,
+                  "racer": "wren"
+                },
+                {
+                  "x": 162.22345853472675,
+                  "y": -2.4999999999999982,
+                  "speed": 16.85000000000024,
+                  "lap": 0,
+                  "racer": "cinder"
+                },
+                {
+                  "x": 165.39032184418394,
+                  "y": 0.000016652378286135637,
+                  "speed": 17.99880296864227,
+                  "lap": 0,
+                  "racer": "hyguana"
+                },
+                {
+                  "x": 168.69547745084068,
+                  "y": 2.4999985479554008,
+                  "speed": 18.18387325638179,
+                  "lap": 0,
+                  "racer": "pip"
+                }
+              ]
+            }
+          ],
+          "frames": 211,
+          "ratio": 0.9579271490362288
+        }
+      ],
+      "frames": [
+        245,
+        232,
+        211
+      ],
+      "median": 232,
+      "target": {
+        "floor": 300,
+        "ratio": 0.9,
+        "median": 315
+      },
+      "passed": false
+    }
+  },
+  "status": "BLOCKED: owner performance gate not met"
+}

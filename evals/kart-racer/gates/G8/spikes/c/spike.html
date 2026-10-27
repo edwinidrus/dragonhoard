@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>spike c — silhouette</title>
+    <style>
+      body { margin: 0; background: #14121c; font: 14px system-ui, sans-serif; }
+      #racer-menu {
+        position: fixed; inset: 0; display: none; place-items: center;
+        background: #14121ccc; color: #eee;
+      }
+      #racer-menu[data-open='true'] { display: grid; }
+      #racer-menu-cards { display: flex; gap: 16px; }
+      .card {
+        width: 160px; padding: 12px; border-radius: 10px; text-align: center;
+        background: #221f2e; border: 2px solid transparent;
+      }
+      .card[data-selected='true'] { border-color: #fff; }
+      .name { font-weight: 700; }
+      .klass { opacity: 0.7; font-size: 12px; margin-bottom: 8px; }
+      .bar { height: 6px; background: #3a3548; border-radius: 3px; margin: 4px 0; }
+      .bar > i { display: block; height: 100%; border-radius: 3px; background: #9b8cff; }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { RACERS } from './src/logic/racers.js';
+
+      // ponytail: prototype only — silhouette is a box + box-shadow wheels in currentColor, so one
+      // inline `color` drives every shape. Ceiling: it is a flat glyph, not the racer's real model;
+      // upgrade path is a per-racer SVG traced from createKartMesh parts if the menu needs more.
+      const rgba = (c) => `rgb(${(c >> 16) & 255}, ${(c >> 8) & 255}, ${c & 255})`;
+
+      const silhouette = (color) => {
+        const wrap = document.createElement('div');
+        wrap.dataset.preview = 'silhouette';
+        wrap.setAttribute(
+          'style',
+          `color:${rgba(color)};width:110px;height:70px;margin:8px auto;position:relative;`,
+        );
+        const body = document.createElement('div');
+        body.setAttribute(
+          'style',
+          'position:absolute;left:10px;bottom:18px;width:70px;height:22px;' +
+            'background:currentColor;border-radius:6px 14px 4px 4px;' +
+            'box-shadow:38px -14px 0 -2px currentColor',
+        );
+        const wheels = document.createElement('div');
+        wheels.setAttribute(
+          'style',
+          'position:absolute;left:6px;bottom:2px;width:26px;height:26px;border-radius:50%;' +
+            'background:currentColor;box-shadow:72px 0 0 0 currentColor',
+        );
+        wrap.append(body, wheels);
+        return wrap;
+      };
+
+      const build = (index) => {
+        const menu = document.createElement('div');
+        menu.id = 'racer-menu';
+        const cards = document.createElement('div');
+        cards.id = 'racer-menu-cards';
+        RACERS.forEach((racer, i) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.dataset.racer = racer.id;
+          if (i === index) card.dataset.selected = 'true';
+          card.innerHTML =
+            `<div class="name">${racer.name}</div><div class="klass">${racer.klass}</div>`;
+          for (const [stat, width] of [
+            ['speed', racer.tuning.maxSpeed],
+            ['accel', racer.tuning.accel],
+            ['handling', racer.tuning.steerRate],
+          ]) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.dataset.stat = stat;
+            const fill = document.createElement('i');
+            fill.setAttribute('style', `width:${Math.min(100, width * 4)}px`);
+            bar.append(fill);
+            card.append(bar);
+          }
+          card.append(silhouette(racer.color));
+          cards.append(card);
+        });
+        menu.append(cards);
+        return menu;
+      };
+
+      const t0 = performance.now();
+      let menu = build(0);
+      const buildMs = performance.now() - t0;
+
+      const show = (index = 0) => {
+        hide();
+        menu = build(index);
+        menu.dataset.open = 'true';
+        document.body.append(menu);
+      };
+      const hide = () => menu.remove();
+
+      window.__buildMs = buildMs;
+      window.__spike = { show, hide };
+    </script>
+  </body>
+</html>

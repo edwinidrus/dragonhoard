@@ -1,0 +1,62 @@
+{
+  "samples": [
+    {
+      "track": "lantern",
+      "live": {
+        "buffers": 7,
+        "calls": 2,
+        "geometries": 1,
+        "meshes": 2
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "ember",
+      "live": {
+        "buffers": 0,
+        "calls": 0,
+        "geometries": 0,
+        "meshes": 0
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "lantern",
+      "live": {
+        "buffers": 7,
+        "calls": 2,
+        "geometries": 1,
+        "meshes": 2
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "ember",
+      "live": {
+        "buffers": 0,
+        "calls": 0,
+        "geometries": 0,
+        "meshes": 0
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    }
+  ],
+  "canvases": 1,
+  "errors": []
+}

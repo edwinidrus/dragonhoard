@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>spike a</title></head>
+  <body>
+    <div id="racer-menu" hidden><div id="racer-menu-cards"></div></div>
+    <script type="module">
+      import * as THREE from 'three';
+      import { RACERS } from './src/logic/racers.js';
+      import { createKartMesh } from './src/render/kartMesh.js';
+
+      const menu = document.getElementById('racer-menu');
+      const cards = document.getElementById('racer-menu-cards');
+      let built = false;
+
+      // Option (a): one throwaway WebGLRenderer, one render per racer, copy to a data URL.
+      function bakeRacers() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setSize(128, 128, false);
+        const scene = new THREE.Scene();
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 3));
+        const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
+        camera.position.set(3.2, 2.2, 3.2);
+        camera.lookAt(0, 0.6, 0);
+        const urls = RACERS.map((racer) => {
+          const kart = createKartMesh(racer);
+          scene.add(kart);
+          renderer.render(scene, camera);
+          const url = canvas.toDataURL('image/png');
+          scene.remove(kart);
+          kart.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+          return url;
+        });
+        renderer.dispose();
+        return urls;
+      }
+
+      function build() {
+        const t0 = performance.now();
+        cards.replaceChildren();
+        const urls = bakeRacers();
+        window.__spike.glAfterBuild = window.__glCount;
+        RACERS.forEach((racer, i) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.dataset.racer = racer.id;
+          const img = document.createElement('img');
+          img.className = 'preview';
+          img.src = urls[i];
+          card.appendChild(img);
+          const name = document.createElement('div');
+          name.className = 'name';
+          name.textContent = racer.name;
+          const klass = document.createElement('div');
+          klass.className = 'class';
+          klass.textContent = racer.klass;
+          card.append(name, klass);
+          for (const stat of ['speed', 'accel', 'handling']) {
+            const bar = document.createElement('div');
+            bar.dataset.stat = stat;
+            bar.style.width = '60px';
+            bar.style.height = '4px';
+            card.appendChild(bar);
+          }
+          cards.appendChild(card);
+        });
+        built = true;
+        window.__spike.buildMs = performance.now() - t0;
+      }
+
+      window.__spike = {
+        buildMs: null,
+        glAfterBuild: null,
+        show(index) {
+          if (!built) build();
+          menu.hidden = false;
+          [...cards.children].forEach((card, i) => {
+            if (i === index) card.dataset.selected = 'true';
+            else delete card.dataset.selected;
+          });
+          window.__spike.index = index;
+        },
+        hide() { menu.hidden = true; },
+        rebuild() { built = false; build(); },
+      };
+    </script>
+  </body>
+</html>

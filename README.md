@@ -26,6 +26,11 @@ approval** before any later task uses it.
 - **Frontier judge, cheap builder (optional).** Hybrid mode lets a free OpenCode model build
   while Claude Code judges and re-verifies every result.
 
+**Proven on a real build.** In an open reliability trial, dragonhoard took a one-page plan to a
+playable 3D kart racer in 95 tasks with zero false "done"s. A headless OpenCode builder did most of
+the work for $4.60 of paid tokens while Claude Code judged.
+[Results, evidence and what failed](evals/kart-racer/README.md).
+
 Runs as a Claude Code plugin, and in OpenCode, Codex CLI, Cline or any agent that reads
 `AGENTS.md`.
 

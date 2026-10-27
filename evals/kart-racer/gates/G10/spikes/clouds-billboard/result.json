@@ -1,0 +1,37 @@
+{
+  "port": 5173,
+  "chunks": [
+    {
+      "file": "assets/index-BDzkOhP1.js",
+      "bytes": 601324,
+      "gzip": 155356
+    },
+    {
+      "file": "index.html",
+      "bytes": 518,
+      "gzip": 382
+    }
+  ],
+  "drawTable": {
+    "m10-start": 102,
+    "m10-jump-1": 73,
+    "m10-bridge": 94,
+    "m10-hairpin": 49,
+    "m10-jump-2": 58,
+    "m10-s-bend": 107,
+    "m10-landmark": 45,
+    "m10-sea": 43,
+    "m10-ember-start": 68
+  },
+  "buildSample": {
+    "frames": 242,
+    "seconds": 10.03480000000447
+  },
+  "errors": [],
+  "imageRequests": 0,
+  "liveContexts": 1,
+  "canvases": 1,
+  "fail": [
+    "move sample >= 300 frames (242 in 10.0s)"
+  ]
+}

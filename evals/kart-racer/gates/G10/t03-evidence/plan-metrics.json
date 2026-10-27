@@ -1,0 +1,16 @@
+{
+  "layers": [
+    {
+      "id": "near",
+      "puffs": 5,
+      "spheres": 18
+    },
+    {
+      "id": "far",
+      "puffs": 5,
+      "spheres": 20
+    }
+  ],
+  "maxEnvelopeDegrees": 4.348185940217547,
+  "capDegrees": 6
+}
