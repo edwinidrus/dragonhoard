@@ -1,13 +1,13 @@
 # Hoard Rally: dragonhoard's reliability trial
 
 <p align="center">
-  <img src="gates/G10/t08-evidence/m10-start-grid-forward.png" alt="Hoard Rally start grid on Lantern Reach at dusk: floating islands, rivals ahead, a sleeping dragon on a far island" width="720">
+  <img src="gates/G10/t09-evidence/m10-start-grid-forward.png" alt="Hoard Rally start grid on Lantern Reach at dusk: floating islands, rivals ahead, a sleeping dragon on a far island" width="720">
 </p>
 
-**dragonhoard took a one-page game plan to a playable 3D kart racer in 95 tasks, and never once
-marked a task done that wasn't.** A headless OpenCode agent built 81 of those tasks while Claude
+**dragonhoard took a one-page game plan to a playable 3D kart racer in 96 tasks, and never once
+marked a task done that wasn't.** A headless OpenCode agent built 82 of those tasks while Claude
 Code judged and re-checked every one. Claude's cost per task fell from about $9.8 when it built
-to about $1.4 when it only judged.
+to about $1.5 when it only judged.
 
 ## What was built
 
@@ -18,8 +18,8 @@ Hoard Rally is an original arcade kart racer in Three.js:
   rivals.
 - **Race flow:** laps, a HUD and a results screen.
 - **Sound:** Web Audio music and effects, with a final-lap speed-up.
-- **Milestone M10:** a painted sky, clouds, far islands, road dressing and a sleeping dragon
-  landmark.
+- **Milestone M10:** a painted sky, clouds, far islands, road dressing, a sleeping dragon
+  landmark, glowing lanterns and glinting gold.
 
 The game repo is private; the screenshots are in `gates/`.
 
@@ -27,15 +27,15 @@ The game repo is private; the screenshots are in `gates/`.
 
 | | |
 |---|---|
-| Tasks | 95 of 96 done across 11 milestones; gates G0–G9 passed. The owner closed the trial before M10-T09 and G10. |
+| Tasks | 96 of 96 done across 11 milestones; gates G0–G10 passed (the last two tasks and G10 on the owner's override, see below) |
 | False "done" | 0. A hidden audit independently re-ran every finished task's checks. |
-| Evidence per task | 94 of 95 tasks had both a journal and events (98.9 %). |
+| Evidence per task | 95 of 96 tasks had both a journal and events (99.0 %). |
 | Scope | 0 unreported changes on task commits |
-| Tests | 7 → 461 unit tests and 35 browser smoke tests; no test was weakened |
+| Tests | 7 → 467 unit tests and 35 browser smoke tests; no test was weakened |
 | Injected faults | 7 of 8 handled (F1–F5, F7, F8); F6 failed (see below) |
 | Cold start | 4 of 4 fresh sessions named the right next task and the reason |
-| Builder | 165 headless OpenCode runs, 28.5 h, $4.60 of paid tokens (DeepSeek on OpenRouter). The rest ran on a free tier and on ChatGPT Plus (GPT-6.1 Sol). |
-| Judge | Claude Code (Opus 5.5): about $1.4 per task while OpenCode built, against about $9.8 when Claude built (list-price estimates) |
+| Builder | 170 headless OpenCode runs, 29 h, $4.60 of paid tokens (DeepSeek on OpenRouter). The rest ran on a free tier and on ChatGPT Plus (GPT-6.1 Sol). |
+| Judge | Claude Code (Opus 5.5): about $1.5 per task while OpenCode built, against about $9.8 when Claude built (list-price estimates) |
 
 ## What did not go well
 
@@ -45,8 +45,9 @@ The game repo is private; the screenshots are in `gates/`.
   held the name. The fix for dragonhoard: stop with QUESTION when an owner request breaks the
   plan's own rules.
 - **Frame floor:** the 300-frame smoke floor depends on how busy the machine is. Late in M10, the
-  already accepted T07 build fell under it too. The owner merged T08 (the dragon) on override
-  without the frame acceptance; the threshold itself was never changed.
+  already accepted T07 build fell under it too. A/B runs under equal load showed T08 and T09 cost
+  nothing measurable, so the owner accepted T08, T09 and gate G10 on override without the frame
+  acceptance; the threshold itself was never changed.
 - **Shaping:** some task packs carried stale interfaces, and one carried a rule that contradicted
   the reference. Each cost a round-trip with the owner. The builder stopped with evidence every
   time instead of guessing.

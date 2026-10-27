@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# M10-T09 lantern halos and gold glints: build, verify, no commit (the judge views the screenshots and measures the
+# frame rule by A/B on a quiet host first). Sol only (owner, 2026-10-26); a Plus limit is waited out (48 h patience).
+# The trial was reopened by the owner on 2026-10-27 to finish T09 and G10; commits stay local until the owner pushes.
+G=/home/edwinidrus/hobbys/dragonhoard_planing/evals/kart-racer
+cli=/home/edwinidrus/hobbys/dragonhoard_trial_plugin_b/scripts/dragonhoard.py
+game=/home/edwinidrus/hobbys/dragonhoard_test
+cd "$game"
+eval "$(grep '^quiet()' "$G/loop.sh")"
+out=$(python3 "$cli" delegate --quota-patience 172800 "Use the dragonhoard-next skill. Owner note for M10-T09, decided before any T09 measurement: (1) Host and budget: the judge ran the unchanged npm run smoke on HEAD (T08) on this machine at 20:35Z: 137 four-model frames, 144 Cinder-only, ratio 0.95, 33 passed and 2 failed (the 300-frame floor at smoke.spec.js:706 and the HUD timing test at smoke.spec.js:308), while another project's container build loaded the machine. The absolute floor cannot be measured on this host at present. Owner amendment (external judge, 2026-10-27; smallest change, thresholds unchanged): in Verify, record the baseline smoke numbers and every failure exactly, and continue when npm test is green and the only smoke failures are the frame floor and the HUD timing test; do not stop for those. In Test, run the unchanged npm run smoke, record frames, ratio and failures, and add the T09 row to the M10 cost table in the M10-T02 journal. A functional failure that is not load timing still stops you with BLOCKED. The 300 floor and the 0.90 ratio stay: the judge measures acceptance with interleaved A/B runs against HEAD on a quiet host before the commit, so spend as little as T09 can: the gold glint is an emissive pulse on the existing gold material (zero added draws); keep the halos small on screen, depthWrite false, no shadows, and merge the eight halos into as few draws as the sprite/plane rule allows. Report the draw calls per review spot against T01-T08. (2) Evidence: save the production screenshots of the nine fixed review spots plus the two forward chase-camera views (start grid, hairpin exit) into dist/m10-t09/production/, and two close views (one lantern halo, one gold pile glint) into dist/m10-t09/details/; the judge views them before the commit. The road must stay readable and T04's landmark island and T08's dragon must stay unoccluded in both forward views. (3) Naming rule as before: an angle-and-radius layout is a radial grid or a ring grid. Do not commit. End with the HANDOFF block.")
+echo "$out" | sed -n '1,14p'
+[ "$(echo "$out" | sed -n 's/^status: *//p' | tail -1)" = DONE ] || { echo "t09: stop"; exit 1; }
+quiet; v=$(python3 "$cli" verify M10-T09); rc=$?; echo "$v" | grep -E "^FAIL|^verify:"
+[ $rc -eq 0 ] || { echo "t09: verify FAIL (smoke frame floor expected on a loaded host; the judge checks the rest)"; exit 1; }
+echo "t09: M10-T09 verify PASS (not committed; the judge views the evidence and measures A/B first)"
