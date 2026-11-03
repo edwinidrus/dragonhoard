@@ -16,6 +16,7 @@ packs, so a coding agent loads only the context one task needs.
 ├── logs/events.jsonl    # append-only event log, one JSON line per event
 ├── logs/lessons.jsonl   # append-only lesson ledger
 ├── templates/           # skeletons for new milestones and task packs
+├── quick/               # Q<nn>-<slug>.journal.md: small fixes outside the milestones (/dragonhoard:quick)
 └── M<n>-<name>/
     ├── CONSTITUTION.md  # milestone articles; inherits ../CONSTITUTION.md
     ├── PLAN.md          # goal, scope, task order, dependencies, owner decisions

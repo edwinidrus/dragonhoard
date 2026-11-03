@@ -116,6 +116,12 @@ def test_end_to_end(tmp: Path) -> None:
     assert "L01: Write" not in (root / "DIGEST.md").read_text()
     kinds = [json.loads(line)["kind"] for line in (root / "logs" / "events.jsonl").read_text().splitlines()]
     assert kinds == ["init", "option.chosen", "task.blocked", "lesson.approved", "lesson.revoked"]
+    before = run(*project, "check"), run(*project, "next")
+    code, out = run(*project, "quick", "Fix the off-by-one in the timer!")
+    assert code == 0 and out.split() == ["Q01", "implementation/quick/Q01-fix-the-off-by-one-in-the-timer.journal.md"], out
+    assert run(*project, "quick", "??")[1].startswith("Q02 implementation/quick/Q02-change.journal.md")
+    assert "# Q01: Fix the off-by-one" in (root / "quick/Q01-fix-the-off-by-one-in-the-timer.journal.md").read_text()
+    assert (run(*project, "check"), run(*project, "next")) == before  # milestones untouched
     code, out = run(*project, "stats")
     assert code == 0 and "| M1 " in out and "0 approved, 0 rejected, 1 revoked" in out, out
     (m1,) = json.loads(run(*project, "stats", "--json")[1])
@@ -186,6 +192,7 @@ def test_hosts(tmp: Path) -> None:
     assert agent["name"] == "dragonhoard_spiker" and agent["model"] == "mid-model"
     assert "evidence" in agent["developer_instructions"] and agent["description"]
     assert (cx / ".agents/skills/dragonhoard-learn/SKILL.md").is_file()
+    assert "/dragonhoard-shape" in (cx / ".agents/skills/dragonhoard-quick/SKILL.md").read_text()
 
     # cline and generic: no role agents; the judge pauses, the spiker gets a worktree
     for host, skills_dir, rules in (("cline", ".cline/skills", ".clinerules/dragonhoard.md"),

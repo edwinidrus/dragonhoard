@@ -1,0 +1,16 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"  # the oldest supported: dragonhoard.py uses datetime.UTC
+      - run: python3 tests/test_dragonhoard.py
+      - run: python3 evals/kart-racer/audit.py --self-check  # imports dragonhoard.py helpers

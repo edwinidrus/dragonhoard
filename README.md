@@ -9,6 +9,13 @@
   one task at a time, learning as it goes
 </p>
 
+<p align="center">
+  <a href="https://github.com/edwinidrus/dragonhoard/actions/workflows/test.yml"><img src="https://github.com/edwinidrus/dragonhoard/actions/workflows/test.yml/badge.svg" alt="tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Claude%20Code-plugin-d97757" alt="Claude Code plugin">
+  <img src="https://img.shields.io/badge/python-stdlib%20only-3776ab" alt="Python stdlib only">
+</p>
+
 **A self-improving harness for coding agents: it gets better at your project with every task,
 without fine-tuning, and without letting the model rewrite its own rules.**
 
@@ -161,6 +168,7 @@ In hybrid mode, `/dragonhoard:conduct` runs the same loop and a headless OpenCod
 | `/dragonhoard:init` | Asks where the workspace lives (`implementation/`, `improvement/`, or your choice), confirms your check commands, then scaffolds the root files. |
 | `/dragonhoard:shape <plan.md>` | Proposes a milestone cut and waits for your OK. Then writes the milestone folders, `STATUS.md` and task packs for the first milestone. `/dragonhoard:shape M2` writes the next milestone's packs when it comes up. |
 | `/dragonhoard:next` | Works exactly one task through the loop, records real evidence, and stops. |
+| `/dragonhoard:quick "<fix>"` | A small fix with no milestones: the same loop (lessons, failing test first, checks, journal) as one quick task `Q<nn>`. Hands off to `shape` if it grows. |
 | `/dragonhoard:explore` | For an open choice: cheap parallel retrieval, up to 3 parallel spikes in isolated worktrees, a comparison by a frontier model. You pick; the decision is logged. |
 | `/dragonhoard:learn` | Drafts lessons from journals, screens them deterministically, has the judge review them, then asks you to approve each. `revoke L<nn>` removes one. |
 | `/dragonhoard:models` | The current model suggests which model fits each role, using the host's model list and the journey's evidence; you confirm. |
@@ -181,6 +189,7 @@ dragonhoard.json              # {"root": "...", "checks": [...]}
 ├── logs/events.jsonl         # what happened, across the journey
 ├── logs/lessons.jsonl        # lesson ledger: approved, rejected, revoked
 ├── templates/                # TASK.md + phase skeletons
+├── quick/Q<nn>-<slug>.journal.md   # quick tasks, outside the milestones
 └── M<n>-<name>/{CONSTITUTION,PLAN,PROGRESS,GATE}.md, tasks/<pack>.md, tasks/<pack>.journal.md
 ```
 
@@ -204,3 +213,5 @@ the next task on. Nothing is approved automatically.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+If the dragon saved you from a false "done", a star helps other people find it.
