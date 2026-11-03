@@ -4,3 +4,4 @@ evals/kart-racer/audit.jsonl
 evals/kart-racer/gates/*/rea-static.json
 evals/*
 *:Zone.Identifier
+.env

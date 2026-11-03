@@ -9,14 +9,19 @@
   one task at a time, learning as it goes
 </p>
 
-**A coding agent that gets better at your project with every task, and never changes how it
-works without your sign-off.**
+**A self-improving harness for coding agents: it gets better at your project with every task,
+without fine-tuning, and without letting the model rewrite its own rules.**
 
-Self-improving agents are everywhere; most let the model rewrite its own rules. dragonhoard
-learns too, but every lesson passes a deterministic screen, a frontier-model judge and **your
-approval** before any later task uses it.
+The weights never change. What improves is the context: failures and fixes become lesson
+candidates, and each candidate passes a deterministic screen, a frontier-model judge and **your
+approval**. From the next task on, every model you use works with it, including a free one.
 
-- **Learns, gated.** Failures and fixes become lessons; nothing is approved automatically.
+<p align="center">
+  <img src="docs/demo.gif" alt="Terminal demo: init a workspace, get the next task, the lesson screen rejects an injected instruction, a real lesson is approved, the session-start hook loads it, and stats shows lessons cited across the 96-task trial" width="820">
+</p>
+
+- **Learns, gated.** Failures and fixes become lessons, each with provenance and a revoke.
+  Nothing is approved automatically.
 - **One task, small context.** Your plan becomes milestones and self-contained task packs; the
   agent loads one pack, not the whole repo.
 - **Evidence, not claims.** Failing test first, real command output in the journal, and `check`
@@ -26,8 +31,14 @@ approval** before any later task uses it.
 - **Frontier judge, cheap builder (optional).** Hybrid mode lets a free OpenCode model build
   while Claude Code judges and re-verifies every result.
 
+**Proven on a real build.** In an open reliability trial, dragonhoard took a one-page plan to a
+playable 3D kart racer in 96 tasks with zero false "done"s. A headless OpenCode builder did most of
+the work for $4.60 of paid tokens while Claude Code judged.
+[Results, evidence and what failed](evals/kart-racer/README.md).
+
 Runs as a Claude Code plugin, and in OpenCode, Codex CLI, Cline or any agent that reads
-`AGENTS.md`.
+`AGENTS.md`. How it compares with Superpowers, Spec Kit, BMAD and others:
+[docs/compare.md](docs/compare.md).
 
 ## How one task runs
 
@@ -54,6 +65,35 @@ flowchart LR
 | test | Two failed attempts at the same issue mean BLOCKED: no endless retry loop, no fake DONE. |
 | record | Journal, `events.jsonl` and `DIGEST.md` let the next session start cold with full memory, and let you audit every claim. |
 
+## How it learns
+
+```mermaid
+flowchart LR
+  F["failure or fix<br/>in a journal"] --> C["lesson candidate<br/>When X, do Y, because Z"]
+  C --> S["deterministic screen<br/>injection, secrets, paths, size"]
+  S --> J["frontier judge<br/>faithful? general? risky?"]
+  J --> O["you<br/>approve, edit, reject"]
+  O --> L["LESSONS.md<br/>versioned, revocable"]
+  L --> N["every later task,<br/>on any model"]
+```
+
+This is self-improvement through context rather than weights: the approach of *Agentic Context
+Engineering* ([ACE, ICLR 2026](https://arxiv.org/abs/2510.04618)). ACE improves agents by growing
+an itemized playbook, and it warns that letting the model rewrite its whole context causes
+"context collapse". dragonhoard's lessons are itemized, append-only and gated, so a bad lesson
+can't quietly overwrite a good one, and every lesson has an owner.
+
+What the trial showed:
+- 7 candidates: 6 approved, 1 rejected. The rejected one was an injected "ignore previous
+  instructions" lesson, stopped by the screen.
+- Lessons carry across models. Most were approved while Claude built (M0–M3); in the hybrid
+  phase (M4–M10), the cheaper OpenCode builder cited a lesson in 40 of its 82 journals.
+- Not measured yet: how much the lessons raise the first-pass rate. That needs a lessons-on vs
+  lessons-off run, which is designed in [evals/lessons-ab](evals/lessons-ab/scorecard.md).
+
+See it for your own project with `dragonhoard.py stats`. It prints, per milestone, the first-pass
+rate, the lessons in force and the journals that cite one.
+
 ## Modes
 
 `/dragonhoard:init` asks which of two delivery modes to use:
@@ -70,10 +110,10 @@ Requires `python3` (stdlib only).
 **Claude Code** (plugin):
 
 ```bash
-claude --plugin-dir /path/to/dragonhoard     # try it for one session
-# or, permanently:
-/plugin marketplace add /path/to/dragonhoard
+/plugin marketplace add edwinidrus/dragonhoard
 /plugin install dragonhoard@dragonhoard
+# or try a local clone for one session:
+claude --plugin-dir /path/to/dragonhoard
 ```
 
 **OpenCode, Codex CLI, Cline, or any agent that reads `AGENTS.md`** (copied into your project):
@@ -160,3 +200,7 @@ judge step pauses and asks you to switch the session to the judge model.
 
 Every lesson passes four gates: deterministic screen → judge → **your approval** → used from
 the next task on. Nothing is approved automatically.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

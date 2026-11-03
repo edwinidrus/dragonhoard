@@ -1,0 +1,66 @@
+{
+  "samples": [
+    {
+      "track": "lantern",
+      "live": {
+        "buffers": 4,
+        "calls": 1,
+        "geometries": 1,
+        "triangles": 576,
+        "meshes": 1
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "ember",
+      "live": {
+        "buffers": 0,
+        "calls": 0,
+        "geometries": 0,
+        "triangles": 0,
+        "meshes": 0
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "lantern",
+      "live": {
+        "buffers": 4,
+        "calls": 1,
+        "geometries": 1,
+        "triangles": 576,
+        "meshes": 1
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    },
+    {
+      "track": "ember",
+      "live": {
+        "buffers": 0,
+        "calls": 0,
+        "geometries": 0,
+        "triangles": 0,
+        "meshes": 0
+      },
+      "after": {
+        "buffers": 0,
+        "geometries": 0,
+        "calls": 0
+      }
+    }
+  ],
+  "canvases": 1,
+  "errors": []
+}

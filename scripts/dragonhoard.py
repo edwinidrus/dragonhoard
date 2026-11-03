@@ -421,6 +421,51 @@ def _task_line(task: dict[str, str]) -> str:
     return f"{task['task']} [{task['status']}] {task['title']}{pack}"
 
 
+# --- learning stats ----------------------------------------------------------------------
+
+FIRST_PASS_SPOILERS = ("attempt", "verify.failed", "task.blocked")
+MILESTONE = re.compile(r"M\d+(?=-T)")
+
+
+def learning_stats(
+    events: list[dict[str, Any]], ledger: list[dict[str, Any]], journals: dict[str, str]
+) -> list[dict[str, Any]]:
+    """Per milestone: tasks done, done on the first pass, lessons in force at its start, journals citing one."""
+    approved_at: dict[str, str] = {}
+    revoked_at: dict[str, str] = {}
+    for rec in ledger:
+        if rec.get("status") == "approved":
+            approved_at.setdefault(rec["id"], rec["ts"])
+        elif rec.get("status") == "revoked":
+            revoked_at[rec["id"]] = rec["ts"]
+    cite = re.compile(r"\b(" + "|".join(map(re.escape, approved_at)) + r")\b") if approved_at else None
+    spoiled = {e["task"] for e in events if e["kind"] in FIRST_PASS_SPOILERS}
+    rows: dict[str, dict[str, Any]] = {}
+    for event in events:  # append-only, so the first event of a milestone is its start
+        found = MILESTONE.match(event["task"])
+        if found:
+            row = rows.setdefault(found.group(), {"start": event["ts"], "done": set(), "journals": 0, "citing": 0})
+            if event["kind"] == "task.done":
+                row["done"].add(event["task"])
+    for name, text in journals.items():
+        found = MILESTONE.match(name)
+        if found and found.group() in rows:
+            rows[found.group()]["journals"] += 1
+            rows[found.group()]["citing"] += bool(cite and cite.search(text))
+    result = []
+    for milestone in sorted(rows, key=lambda m: int(m[1:])):
+        row = rows[milestone]
+        first = len(row["done"] - spoiled)
+        # "~" sorts after every ISO timestamp, so a lesson never revoked stays in force
+        in_force = sum(1 for i, ts in approved_at.items() if ts < row["start"] and revoked_at.get(i, "~") >= row["start"])
+        result.append({
+            "milestone": milestone, "done": len(row["done"]), "first_pass": first,
+            "first_pass_pct": round(100 * first / len(row["done"])) if row["done"] else None,
+            "lessons_in_force": in_force, "journals": row["journals"], "journals_citing": row["citing"],
+        })
+    return result
+
+
 # --- commands ----------------------------------------------------------------------------
 
 
@@ -521,6 +566,30 @@ def cmd_check(workspace: Workspace, args: argparse.Namespace) -> int:
         print(problem)
     print(f"check: {'FAIL' if problems else 'PASS'} | {len(status)} tasks | {len(problems)} problems")
     return 1 if problems else 0
+
+
+def cmd_stats(workspace: Workspace, args: argparse.Namespace) -> int:
+    ledger = read_jsonl(workspace.ledger)
+    journals = {p.name: p.read_text() for p in workspace.root.glob("M*/tasks/*.journal.md")}
+    rows = learning_stats(read_jsonl(workspace.events), ledger, journals)
+    if args.json:
+        print(json.dumps(rows))
+        return 0
+    table = [["Milestone", "Done", "First pass", "Lessons in force", "Journals citing a lesson"]]
+    for r in rows:
+        pct = "-" if r["first_pass_pct"] is None else f"{r['first_pass_pct']} %"
+        table.append([r["milestone"], str(r["done"]), f"{r['first_pass']} ({pct})",
+                      str(r["lessons_in_force"]), f"{r['journals_citing']}/{r['journals']}"])
+    widths = [max(len(row[i]) for row in table) for i in range(len(table[0]))]
+    for i, row in enumerate(table):
+        print("| " + " | ".join(cell.ljust(w) for cell, w in zip(row, widths)) + " |")
+        if i == 0:
+            print("|" + "|".join("-" * (w + 2) for w in widths) + "|")
+    states = [rec["status"] for rec in lesson_states(ledger).values()]
+    citing, total = sum(r["journals_citing"] for r in rows), sum(r["journals"] for r in rows)
+    print(f"\nlessons: {states.count('approved')} approved, {states.count('rejected')} rejected, "
+          f"{states.count('revoked')} revoked | {citing} of {total} journals cite an approved lesson")
+    return 0
 
 
 def cmd_lesson(workspace: Workspace, args: argparse.Namespace) -> int:
@@ -1128,6 +1197,7 @@ def main(argv: list[str] | None = None) -> int:
     log.add_argument("summary")
     log.add_argument("--ref", default="")
     sub.add_parser("digest")
+    sub.add_parser("stats").add_argument("--json", action="store_true")
     sub.add_parser("check")
     sub.add_parser("hook")
     install = sub.add_parser("install")
@@ -1191,7 +1261,7 @@ def main(argv: list[str] | None = None) -> int:
         print(workspace.write_digest())
         return 0
     handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson,
-                "delegate": cmd_delegate, "verify": cmd_verify}
+                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats}
     return handlers[args.command](workspace, args)
 
 

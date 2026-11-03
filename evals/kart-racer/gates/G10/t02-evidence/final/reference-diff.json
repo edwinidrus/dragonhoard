@@ -1,0 +1,114 @@
+[
+  {
+    "file": "ember-day.png",
+    "mean": 1.14,
+    "p50": 1,
+    "p95": 2,
+    "p99": 3,
+    "max": 3
+  },
+  {
+    "file": "lantern-anti-sun.png",
+    "mean": 2.38,
+    "p50": 1,
+    "p95": 7,
+    "p99": 8,
+    "max": 9
+  },
+  {
+    "file": "lantern-stars.png",
+    "mean": 1.08,
+    "p50": 1,
+    "p95": 2,
+    "p99": 2,
+    "max": 2
+  },
+  {
+    "file": "lantern-sun.png",
+    "mean": 2.5,
+    "p50": 1,
+    "p95": 8,
+    "p99": 9,
+    "max": 11
+  },
+  {
+    "file": "m10-bridge.png",
+    "mean": 1.37,
+    "p50": 1,
+    "p95": 4,
+    "p99": 7,
+    "max": 8
+  },
+  {
+    "file": "m10-ember-corner.png",
+    "mean": 0.84,
+    "p50": 1,
+    "p95": 1,
+    "p99": 2,
+    "max": 3
+  },
+  {
+    "file": "m10-ember-start.png",
+    "mean": 1.05,
+    "p50": 1,
+    "p95": 2,
+    "p99": 3,
+    "max": 3
+  },
+  {
+    "file": "m10-hairpin.png",
+    "mean": 1.46,
+    "p50": 1,
+    "p95": 5,
+    "p99": 7,
+    "max": 8
+  },
+  {
+    "file": "m10-jump-1.png",
+    "mean": 1.07,
+    "p50": 1,
+    "p95": 2,
+    "p99": 3,
+    "max": 154
+  },
+  {
+    "file": "m10-jump-2.png",
+    "mean": 1.05,
+    "p50": 1,
+    "p95": 2,
+    "p99": 3,
+    "max": 4
+  },
+  {
+    "file": "m10-landmark.png",
+    "mean": 2.41,
+    "p50": 1,
+    "p95": 7,
+    "p99": 8,
+    "max": 8
+  },
+  {
+    "file": "m10-s-bend.png",
+    "mean": 1.21,
+    "p50": 1,
+    "p95": 3,
+    "p99": 5,
+    "max": 7
+  },
+  {
+    "file": "m10-shadow-close.png",
+    "mean": 0.77,
+    "p50": 1,
+    "p95": 2,
+    "p99": 5,
+    "max": 119
+  },
+  {
+    "file": "m10-start.png",
+    "mean": 2.06,
+    "p50": 1,
+    "p95": 7,
+    "p99": 9,
+    "max": 11
+  }
+]

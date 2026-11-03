@@ -1,0 +1,21 @@
+{
+  "kartsHeld": true,
+  "lanternDiff": {
+    "count": 144,
+    "box": [
+      423,
+      111,
+      680,
+      124
+    ],
+    "width": 1280,
+    "height": 720
+  },
+  "emberDiff": {
+    "count": 0,
+    "box": null,
+    "width": 1280,
+    "height": 720
+  },
+  "errors": []
+}

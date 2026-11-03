@@ -1,0 +1,266 @@
+{
+  "source": "Actual Vite production build, unchanged app; no source-module serving",
+  "landmarkChecks": [
+    {
+      "file": "m10-start-grid-forward",
+      "pose": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      },
+      "angle": 23.96515979392188,
+      "distance": 297.38146863673853,
+      "hits": []
+    },
+    {
+      "file": "m10-hairpin-exit-forward",
+      "pose": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      },
+      "angle": 22.414147492185982,
+      "distance": 345.9148299256967,
+      "hits": []
+    }
+  ],
+  "images": [
+    {
+      "file": "m10-start.png",
+      "pose": {
+        "position": [
+          -20.000000000000036,
+          4.5,
+          -1.9849181836372534e-14
+        ],
+        "target": [
+          30,
+          1,
+          0
+        ]
+      },
+      "drawCalls": 103,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-jump-1.png",
+      "pose": {
+        "position": [
+          40,
+          5,
+          0
+        ],
+        "target": [
+          62,
+          1,
+          0
+        ]
+      },
+      "drawCalls": 64,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-bridge.png",
+      "pose": {
+        "position": [
+          215.64157758141312,
+          11.317809845049922,
+          -230
+        ],
+        "target": [
+          165.64157758141312,
+          5.611001019288385,
+          -230
+        ]
+      },
+      "drawCalls": 65,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-hairpin.png",
+      "pose": {
+        "position": [
+          -71.8573246530701,
+          7.028503029675594,
+          -86.72326216322256
+        ],
+        "target": [
+          -99.51789600872269,
+          1,
+          -38.43060619565597
+        ]
+      },
+      "drawCalls": 41,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-jump-2.png",
+      "pose": {
+        "position": [
+          290,
+          9.108257982849999,
+          -95.04425712435727
+        ],
+        "target": [
+          290,
+          4.522971718031911,
+          -125.04425712435727
+        ]
+      },
+      "drawCalls": 36,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-s-bend.png",
+      "pose": {
+        "position": [
+          115.64157758141312,
+          10.739514194713484,
+          -230.00000000000003
+        ],
+        "target": [
+          74.91681953384044,
+          4.040602189100129,
+          -197.76753298353083
+        ]
+      },
+      "drawCalls": 80,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-landmark.png",
+      "pose": {
+        "position": [
+          -99.99815906138673,
+          9,
+          -45.40703941595576
+        ],
+        "target": [
+          -319.9976896935515,
+          13,
+          -44.95259290954324
+        ]
+      },
+      "drawCalls": 21,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-start-grid-forward.png",
+      "pose": {
+        "position": [
+          -12.000000000000036,
+          4,
+          -2.5000000000000178
+        ],
+        "target": [
+          -4.000000000000035,
+          1,
+          -2.500000000000016
+        ]
+      },
+      "drawCalls": 68,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-hairpin-exit-forward.png",
+      "pose": {
+        "position": [
+          -61.998436276989295,
+          4,
+          -0.14443301353869153
+        ],
+        "target": [
+          -54.00041150434419,
+          1,
+          0.03333013268449873
+        ]
+      },
+      "drawCalls": 69,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-ember-start.png",
+      "pose": {
+        "position": [
+          -20.00000000000002,
+          3.5,
+          -2.206840161011589e-15
+        ],
+        "target": [
+          40,
+          0,
+          0
+        ]
+      },
+      "drawCalls": 79,
+      "liveGL": 1,
+      "canvases": 1
+    },
+    {
+      "file": "m10-ember-corner.png",
+      "pose": {
+        "position": [
+          56.955742875642784,
+          4,
+          -160
+        ],
+        "target": [
+          38,
+          0,
+          -141.80529879718154
+        ]
+      },
+      "drawCalls": 80,
+      "liveGL": 1,
+      "canvases": 1
+    }
+  ],
+  "lantern": {
+    "errors": [],
+    "imageRequests": []
+  },
+  "ember": {
+    "errors": [],
+    "imageRequests": []
+  },
+  "chunks": [
+    {
+      "file": "index.html",
+      "gzip": 370
+    },
+    {
+      "file": "assets/index-BR7AJekl.js",
+      "gzip": 167714
+    }
+  ],
+  "gzipTotal": 168084,
+  "hazardGeometry": {
+    "addedDraws": 0,
+    "previousBatchTriangles": 2520,
+    "currentBatchTriangles": 2692,
+    "addedTriangles": 172
+  }
+}

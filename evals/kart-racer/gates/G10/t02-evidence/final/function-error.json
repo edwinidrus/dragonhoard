@@ -1,0 +1,70 @@
+[
+  {
+    "file": "lantern-sun.png",
+    "rows": [
+      {
+        "label": "backdrop",
+        "mean": 0.83,
+        "p50": 1,
+        "p95": 1
+      },
+      {
+        "label": "reference",
+        "mean": 1.59,
+        "p50": 1,
+        "p95": 7
+      }
+    ]
+  },
+  {
+    "file": "lantern-anti-sun.png",
+    "rows": [
+      {
+        "label": "backdrop",
+        "mean": 0.78,
+        "p50": 1,
+        "p95": 1
+      },
+      {
+        "label": "reference",
+        "mean": 1.5,
+        "p50": 1,
+        "p95": 6
+      }
+    ]
+  },
+  {
+    "file": "lantern-stars.png",
+    "rows": [
+      {
+        "label": "backdrop",
+        "mean": 0.37,
+        "p50": 0,
+        "p95": 1
+      },
+      {
+        "label": "reference",
+        "mean": 0.8,
+        "p50": 1,
+        "p95": 2
+      }
+    ]
+  },
+  {
+    "file": "ember-day.png",
+    "rows": [
+      {
+        "label": "backdrop",
+        "mean": 0.73,
+        "p50": 1,
+        "p95": 1
+      },
+      {
+        "label": "reference",
+        "mean": 0.64,
+        "p50": 0,
+        "p95": 2
+      }
+    ]
+  }
+]

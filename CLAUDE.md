@@ -22,7 +22,7 @@ domain articles (Hermes, SQLite, Phoenix and the rest).
 python3 tests/test_dragonhoard.py       # the only test: assert-based self-check, prints "ok"
 claude plugin validate .                # manifest check (the CLAUDE.md-at-root warning is expected)
 claude --plugin-dir .                   # load the plugin for one session, e.g. from a scratch project
-python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | check | hook | install | mode | delegate | verify | models | role | lesson
+python3 scripts/dragonhoard.py --help   # CLI: init | next | log | digest | stats | check | hook | install | mode | delegate | verify | models | role | lesson
 python3 -c 'import sys; sys.path.insert(0, "tests"); import test_dragonhoard as t; t.test_screen()'   # one test
 ```
 
@@ -47,7 +47,8 @@ The work is split between two halves:
   - the append-only `events.jsonl` and `lessons.jsonl`;
   - `DIGEST.md` (capped at 150 lines) and `LESSONS.md`, both generated;
   - STATUS/PROGRESS consistency and missing-file checks;
-  - the deterministic lesson screen.
+  - the deterministic lesson screen;
+  - the learning scorecard (`stats`: first-pass rate, lessons in force, journals citing a lesson).
 
   Skills call it as `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"`.
 

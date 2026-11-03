@@ -1,0 +1,86 @@
+{
+  "gzip": [
+    {
+      "file": "index.html",
+      "bytes": 369
+    },
+    {
+      "file": "assets/index-CKpVeem9.js",
+      "bytes": 153272
+    }
+  ],
+  "totalGzip": 153641,
+  "deltaFromPostT01": 5021,
+  "rows": [
+    {
+      "file": "m10-shadow-close",
+      "calls": 85
+    },
+    {
+      "file": "m10-start",
+      "calls": 108
+    },
+    {
+      "file": "m10-jump-1",
+      "calls": 68
+    },
+    {
+      "file": "m10-bridge",
+      "calls": 73
+    },
+    {
+      "file": "m10-hairpin",
+      "calls": 44
+    },
+    {
+      "file": "m10-jump-2",
+      "calls": 53
+    },
+    {
+      "file": "m10-s-bend",
+      "calls": 102
+    },
+    {
+      "file": "m10-landmark",
+      "calls": 40
+    },
+    {
+      "file": "lantern-sun",
+      "calls": 2
+    },
+    {
+      "file": "lantern-anti-sun",
+      "calls": 1
+    },
+    {
+      "file": "lantern-stars",
+      "calls": 1
+    },
+    {
+      "file": "m10-ember-start",
+      "calls": 79
+    },
+    {
+      "file": "m10-ember-corner",
+      "calls": 80
+    },
+    {
+      "file": "ember-day",
+      "calls": 1
+    }
+  ],
+  "contexts": [
+    {
+      "track": "lantern",
+      "created": 2,
+      "live": 1
+    },
+    {
+      "track": "ember",
+      "created": 2,
+      "live": 1
+    }
+  ],
+  "errors": [],
+  "images": []
+}

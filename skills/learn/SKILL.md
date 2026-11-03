@@ -29,6 +29,7 @@ Read `<root>/DIGEST.md`, `<root>/LESSONS.md`, and the journals of tasks finished
 `lesson.*` event. Look for:
 - FAIL→PASS stories, where the root cause is reusable;
 - repeated BLOCKED reasons;
+- `verify.failed` FAIL lines and `task.escalated` reasons (hybrid mode);
 - owner corrections and `option.chosen` rationales that will recur;
 - check commands or setup steps that wasted an attempt.
 

@@ -1,0 +1,32 @@
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 49 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-baseline/index.html                  0.51 kB │ gzip:   0.36 kB
+dist-baseline/assets/index-gGk0HZzv.js  580.27 kB │ gzip: 150.41 kB
+
+✓ built in 452ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 50 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.51 kB │ gzip:   0.37 kB
+dist/assets/index-Fwq6wqK2.js  582.48 kB │ gzip: 151.35 kB
+
+✓ built in 347ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+CANONICAL CLI gzip -9 stdin {"baseline":{"js":148251,"html":369,"total":148620},"current":{"js":149176,"html":370,"total":149546},"delta":{"js":925,"html":1,"total":926}}
+PORT 5181 free; strictPort=true
+{"canonical":{"baseline":{"js":148251,"html":369,"total":148620},"current":{"js":149176,"html":370,"total":149546},"delta":{"js":925,"html":1,"total":926}},"noncanonicalNodeZlib":{"baseline":{"js":148877,"html":369,"total":149246},"current":{"js":149839,"html":370,"total":150209},"delta":{"js":962,"html":1,"total":963}},"geometry":{"vertices":561,"triangles":960,"radius":450},"views":[{"name":"lantern-sun","calls":39,"position":[0,8,-100],"target":[99.6917333733128,15.845909572784494,-100],"screenshot":"evidence/lantern-sun.png","bytes":94462},{"name":"lantern-zenith","calls":7,"position":[0,8,-100],"target":[25.881904510252074,104.59258262890683,-100],"screenshot":"evidence/lantern-zenith.png","bytes":110878},{"name":"lantern-antisun","calls":15,"position":[0,8,-100],"target":[-99.6917333733128,15.845909572784494,-100],"screenshot":"evidence/lantern-antisun.png","bytes":95318},{"name":"lantern-translated","calls":1,"position":[900,400,-800],"target":[999.6917333733128,407.8459095727845,-800],"screenshot":"evidence/lantern-translated.png","bytes":91416},{"name":"standard-lantern-sun","calls":1,"position":[0,400,0],"target":[100,407.87,0],"screenshot":"evidence/standard-lantern-sun.png","bytes":91746},{"name":"standard-lantern-antisun","calls":1,"position":[0,400,0],"target":[-100,407.87,0],"screenshot":"evidence/standard-lantern-antisun.png","bytes":94007},{"name":"standard-lantern-zenith","calls":1,"position":[0,400,0],"target":[1,500,0],"screenshot":"evidence/standard-lantern-zenith.png","bytes":104393},{"name":"ember-day","calls":7,"position":[0,8,-100],"target":[99.6917333733128,15.845909572784494,-100],"screenshot":"evidence/ember-day.png","bytes":48763},{"name":"standard-ember-day","calls":1,"position":[0,400,0],"target":[100,407.87,0],"screenshot":"evidence/standard-ember-day.png","bytes":44858}],"errors":[],"runtimeImageRequests":0}
+PASS both tracks; console/page errors=0; runtime image/texture requests=0; dependencies/main/toneMapping unchanged

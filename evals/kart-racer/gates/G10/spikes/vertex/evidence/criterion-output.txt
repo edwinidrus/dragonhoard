@@ -1,0 +1,29 @@
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 49 modules transformed.
+rendering chunks...
+computing gzip size...
+evidence/baseline-dist/index.html                  0.51 kB │ gzip:   0.36 kB
+evidence/baseline-dist/assets/index-gGk0HZzv.js  580.27 kB │ gzip: 150.41 kB
+
+✓ built in 302ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 50 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.51 kB │ gzip:   0.37 kB
+dist/assets/index-Dxt69jP7.js  586.44 kB │ gzip: 152.44 kB
+
+✓ built in 237ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+PASS {"baseline":{"js":148251,"html":369,"total":148620,"noncanonicalNode":{"js":148877,"html":369,"total":149246}},"variant":{"js":150176,"html":371,"total":150547,"noncanonicalNode":{"js":150893,"html":372,"total":151265}},"delta":1927,"geometry":{"vertices":12513,"triangles":24320,"sunTriangles":48,"stars":180,"segments":[128,96]},"views":[{"track":"lantern","name":"sun-horizon","position":[0,8,0],"target":[99.6917333733128,15.845909572784494,0],"standardized":false,"calls":74,"file":"evidence/lantern-sun-horizon.png","pngBytes":112649},{"track":"lantern","name":"zenith-stars","position":[0,400,0],"target":[30.901699437494745,495.10565162951536,0],"standardized":false,"calls":2,"file":"evidence/lantern-zenith-stars.png","pngBytes":80657},{"track":"lantern","name":"anti-sun","position":[0,8,0],"target":[-99.45218953682733,18.452846326765346,0],"standardized":false,"calls":13,"file":"evidence/lantern-anti-sun.png","pngBytes":144811},{"track":"lantern","name":"standard-sun-horizon","position":[0,400,0],"target":[100,407.87,0],"standardized":true,"calls":3,"file":"evidence/lantern-standard-sun-horizon.png","pngBytes":102256},{"track":"lantern","name":"standard-anti-sun","position":[0,400,0],"target":[-100,407.87,0],"standardized":true,"calls":2,"file":"evidence/lantern-standard-anti-sun.png","pngBytes":148933},{"track":"lantern","name":"standard-zenith-stars","position":[0,400,0],"target":[1,500,0],"standardized":true,"calls":2,"file":"evidence/lantern-standard-zenith-stars.png","pngBytes":80731},{"track":"ember","name":"day","position":[0,8,0],"target":[99.6917333733128,15.845909572784494,0],"standardized":false,"calls":42,"file":"evidence/ember-day.png","pngBytes":30667},{"track":"ember","name":"standard-day","position":[0,400,0],"target":[100,407.87,0],"standardized":true,"calls":1,"file":"evidence/ember-standard-day.png","pngBytes":22927}],"consolePageErrors":0,"runtimeImageRequests":0}

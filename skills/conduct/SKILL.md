@@ -89,6 +89,10 @@ When a milestone's last task is done, or the builder reports PARTIAL for a gate:
    one task each, through `delegate`.
 3. Ask the owner to do the hands-on checks in GATE.md. Then delegate
    `"Owner: G<n> <passed|failed>: <their notes>. Record it."`.
+4. Harvest lessons here, with `/dragonhoard:learn`, over this milestone's journals and
+   `verify.failed` and `task.escalated` events. You are the judge (external); the owner approves
+   each lesson. The builder never proposes or applies lessons. Approved lessons reach it through
+   `DIGEST.md` from the next task on.
 
 ## 6. Keep the context small
 
