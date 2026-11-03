@@ -568,6 +568,21 @@ def cmd_check(workspace: Workspace, args: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+def cmd_quick(workspace: Workspace, args: argparse.Namespace) -> int:
+    """Start a quick task: a small change outside the milestones, with its own ID and journal."""
+    folder = workspace.root / "quick"
+    folder.mkdir(parents=True, exist_ok=True)
+    numbers = [int(m.group(1)) for p in folder.glob("Q*.journal.md") if (m := re.match(r"Q(\d+)-", p.name))]
+    task = f"Q{max(numbers, default=0) + 1:02d}"
+    slug = re.sub(r"[^a-z0-9]+", "-", args.title.lower()).strip("-")[:40].strip("-") or "change"
+    journal = folder / f"{task}-{slug}.journal.md"
+    journal.write_text(f"# {task}: {args.title}\n\nQuick task, outside the milestones. One attempt block per try.\n")
+    ref = journal.relative_to(workspace.root).as_posix()
+    append_jsonl(workspace.events, {"ts": now(), "task": task, "kind": "task.started", "summary": args.title, "ref": ref})
+    print(f"{task} {journal.relative_to(workspace.project).as_posix()}")
+    return 0
+
+
 def cmd_stats(workspace: Workspace, args: argparse.Namespace) -> int:
     ledger = read_jsonl(workspace.ledger)
     journals = {p.name: p.read_text() for p in workspace.root.glob("M*/tasks/*.journal.md")}
@@ -1198,6 +1213,7 @@ def main(argv: list[str] | None = None) -> int:
     log.add_argument("--ref", default="")
     sub.add_parser("digest")
     sub.add_parser("stats").add_argument("--json", action="store_true")
+    sub.add_parser("quick").add_argument("title")
     sub.add_parser("check")
     sub.add_parser("hook")
     install = sub.add_parser("install")
@@ -1261,7 +1277,7 @@ def main(argv: list[str] | None = None) -> int:
         print(workspace.write_digest())
         return 0
     handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson,
-                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats}
+                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats, "quick": cmd_quick}
     return handlers[args.command](workspace, args)
 
 

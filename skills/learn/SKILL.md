@@ -26,7 +26,7 @@ Stop.
 ## 1. Harvest
 
 Read `<root>/DIGEST.md`, `<root>/LESSONS.md`, and the journals of tasks finished since the last
-`lesson.*` event. Look for:
+`lesson.*` event, including quick tasks (`<root>/quick/Q<nn>-*.journal.md`). Look for:
 - FAIL→PASS stories, where the root cause is reusable;
 - repeated BLOCKED reasons;
 - `verify.failed` FAIL lines and `task.escalated` reasons (hybrid mode);
