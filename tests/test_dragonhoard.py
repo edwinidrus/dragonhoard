@@ -116,6 +116,10 @@ def test_end_to_end(tmp: Path) -> None:
     assert "L01: Write" not in (root / "DIGEST.md").read_text()
     kinds = [json.loads(line)["kind"] for line in (root / "logs" / "events.jsonl").read_text().splitlines()]
     assert kinds == ["init", "option.chosen", "task.blocked", "lesson.approved", "lesson.revoked"]
+    code, out = run(*project, "stats")
+    assert code == 0 and "| M1 " in out and "0 approved, 0 rejected, 1 revoked" in out, out
+    (m1,) = json.loads(run(*project, "stats", "--json")[1])
+    assert (m1["milestone"], m1["done"], m1["first_pass_pct"]) == ("M1", 0, None), m1
 
     code, out = run("--project", str(tmp), "hook")
     assert code == 0 and "dragonhoard" in out and "Next task" in out
@@ -342,9 +346,26 @@ def test_hybrid(tmp: Path) -> None:
     assert dragonhoard.parse_handoff("HANDOFF\nstatus: maybe\n") is None
 
 
+def test_stats() -> None:
+    ev = lambda ts, task, kind: {"ts": ts, "task": task, "kind": kind, "summary": "", "ref": ""}
+    events = [ev("1", "M1-T01", "task.started"), ev("2", "M1-T01", "task.done"),
+              ev("3", "M1-T02", "verify.failed"), ev("4", "M1-T02", "task.done"),
+              ev("6", "M2-T01", "task.started"), ev("7", "M2-T01", "task.done"), ev("8", "-", "init")]
+    ledger = [{"ts": "5", "id": "L01", "status": "approved"}, {"ts": "5", "id": "L02", "status": "approved"},
+              {"ts": "5", "id": "L03", "status": "rejected"}, {"ts": "5", "id": "L02", "status": "revoked"}]
+    journals = {"M1-T01-a.journal.md": "no lesson", "M2-T01-b.journal.md": "followed L01",
+                "M2-T02-c.journal.md": "L03 is not approved, L1 is not an id"}
+    m1, m2 = dragonhoard.learning_stats(events, ledger, journals)
+    assert (m1["milestone"], m1["done"], m1["first_pass"], m1["first_pass_pct"]) == ("M1", 2, 1, 50), m1
+    assert m1["lessons_in_force"] == 0 and m1["journals"] == 1 and m1["journals_citing"] == 0
+    assert m2["lessons_in_force"] == 1 and m2["journals"] == 2 and m2["journals_citing"] == 1, m2  # L02 revoked
+    assert dragonhoard.learning_stats([], [], {}) == []
+
+
 if __name__ == "__main__":
     test_tables_and_next()
     test_screen()
+    test_stats()
     with tempfile.TemporaryDirectory() as folder:
         test_hosts(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
