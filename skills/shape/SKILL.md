@@ -14,7 +14,8 @@ CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoa
 Arguments: $ARGUMENTS. That is a plan file path, a milestone ID such as `M2`, or empty (then ask
 for the plan).
 
-Requires `dragonhoard.json`. If it is missing, run `/dragonhoard:init` first. `<root>` is its `root`
+Requires `dragonhoard.json`. If it is missing, run `/dragonhoard:init` first. If the owner has an
+idea but no written plan, run `/dragonhoard:spec` first. `<root>` is its `root`
 value.
 
 ## A. First shape (a plan file or pasted plan)
@@ -23,6 +24,19 @@ value.
    `<root>/LESSONS.md` and the skeletons in `<root>/templates/`. If the project already has
    code, run one scout to map the existing structure (`dragonhoard.py role scout` says how). Do
    not read it all yourself.
+
+1b. **Check the plan first.** Run `dragonhoard.py role judge` and follow what it prints (on PAUSE,
+   do exactly what it says). Give the judge the plan file for Job 3: it reads the plan as its
+   builder would and lists what is missing, contradictory, unobservable or silently decided.
+   Sort its questions into three piles:
+   - answered by the plan or the code already: note the answer, ask nothing;
+   - minor: decide it yourself and show it in the cut as your call;
+   - changes what gets built: ask the owner, all of them in one round, and wait.
+
+   Put the owner's answers into the plan file, then log
+   `dragonhoard.py log - plan.checked "<plan file>: <n> questions, <k> answered by the owner"`.
+   Skip this step when a `plan.checked` event already names this plan and the file has not
+   changed since.
 
 2. **Propose the milestone cut, and write nothing yet.** Present `M0..Mn`. For each milestone
    give:
@@ -77,6 +91,7 @@ value.
 
    ```bash
    dragonhoard.py check     # must PASS: STATUS and PROGRESS agree
+   dragonhoard.py lint      # must PASS: no pack consumes a missing file or a later task
    dragonhoard.py next      # must name M0-T01
    dragonhoard.py digest
    ```
@@ -93,4 +108,5 @@ Run this when `dragonhoard.py next` reaches a task with no pack.
 2. If the tasks no longer fit (scope, order or contracts changed), propose the change and
    ask the owner to confirm it before writing anything.
 3. Write the packs as in A.4. Fill the `[pack]` links in `STATUS.md` and the milestone's
-   `PLAN.md`. Log `dragonhoard.py log - shape.milestone "M<n>: <k> packs"`, then run `check`.
+   `PLAN.md`. Log `dragonhoard.py log - shape.milestone "M<n>: <k> packs"`, then run `check` and `lint`; both
+   must PASS. Fix a pack that `lint` calls stale before handing off.

@@ -33,6 +33,8 @@ approval**. From the next task on, every model you use works with it, including 
   agent loads one pack, not the whole repo.
 - **Evidence, not claims.** Failing test first, real command output in the journal, and `check`
   must PASS before a task counts as done.
+- **Reviewed before it is committed.** Every task's diff is read against its pack in a fresh
+  context, and `checkpoint` refuses to commit until verify and review have passed.
 - **Memory across sessions.** Append-only logs and a generated digest let a fresh session pick
   up where the last one stopped.
 - **Frontier judge, cheap builder (optional).** Hybrid mode lets a free OpenCode model build
@@ -49,8 +51,8 @@ Runs as a Claude Code plugin, and in OpenCode, Codex CLI, Cline or any agent tha
 
 ## How one task runs
 
-Each session works exactly one task through **plan → explore → verify → build → test → record**,
-then stops.
+Each task is worked alone, in its own context, through
+**plan → explore → verify → build → test → record → review**.
 
 ```mermaid
 flowchart LR
@@ -59,6 +61,8 @@ flowchart LR
   V --> B["build<br/>smallest change,<br/>pack files only"]
   B --> T["test<br/>focused test + all checks"]
   T --> R["record<br/>journal, STATUS, logs"]
+  R --> W["review<br/>verify, then a fresh<br/>reviewer reads the diff"]
+  W -- "fix" --> B
   T -- "2 failed tries" --> X["BLOCKED<br/>reason + owner action"]
   R -. "approved lessons" .-> P
 ```
@@ -69,8 +73,9 @@ flowchart LR
 | explore | Cheap parallel scouts for facts, spikes in isolated worktrees for open choices. Each choice is logged once and not argued again. |
 | verify | No building on interfaces that don't exist or on a build that is already red. The test fails first, for the expected reason. |
 | build | The diff stays inside the pack's file list: small, reviewable changes. |
-| test | Two failed attempts at the same issue mean BLOCKED: no endless retry loop, no fake DONE. |
+| test | A second attempt needs a root cause first. Two failed attempts at the same issue mean BLOCKED: no endless retry loop, no fake DONE. |
 | record | Journal, `events.jsonl` and `DIGEST.md` let the next session start cold with full memory, and let you audit every claim. |
+| review | `verify` re-runs the checks and compares the diff with the pack. Then a reviewer that did not build the task reads the diff against the pack. `checkpoint` commits only after both passed. |
 
 ## How it learns
 
@@ -151,8 +156,9 @@ Details and sources: [docs/hosts.md](docs/hosts.md).
 
 ```mermaid
 flowchart LR
-  I["/dragonhoard:init<br/>root, checks, mode"] --> S["/dragonhoard:shape plan.md<br/>milestones + task packs"]
-  S --> N["/dragonhoard:next<br/>one task per session,<br/>repeat"]
+  P0["/dragonhoard:spec<br/>no plan yet: write one"] -.-> S
+  I["/dragonhoard:init<br/>root, checks, mode"] --> S["/dragonhoard:shape plan.md<br/>plan check, milestones,<br/>task packs"]
+  S --> N["/dragonhoard:next (one task)<br/>or /dragonhoard:conduct<br/>(task after task to the gate)"]
   N -- "milestone done" --> S2["/dragonhoard:shape M2<br/>next milestone's packs"]
   S2 --> N
   N -. "open choice" .-> X["/dragonhoard:explore<br/>spikes + judge, you pick"]
@@ -161,18 +167,20 @@ flowchart LR
   M["/dragonhoard:models<br/>any time: model per role"]
 ```
 
-In hybrid mode, `/dragonhoard:conduct` runs the same loop and a headless OpenCode session builds.
+`/dragonhoard:conduct` runs the same loop without stopping between tasks: a builder subagent
+builds each one in solo mode, a headless OpenCode session in hybrid mode.
 
 | Command | What it does |
 |---|---|
 | `/dragonhoard:init` | Asks where the workspace lives (`implementation/`, `improvement/`, or your choice), confirms your check commands, then scaffolds the root files. |
-| `/dragonhoard:shape <plan.md>` | Proposes a milestone cut and waits for your OK. Then writes the milestone folders, `STATUS.md` and task packs for the first milestone. `/dragonhoard:shape M2` writes the next milestone's packs when it comes up. |
-| `/dragonhoard:next` | Works exactly one task through the loop, records real evidence, and stops. |
+| `/dragonhoard:spec` | No written plan yet: asks what you want, one question at a time, plays it back, and writes the plan file. |
+| `/dragonhoard:shape <plan.md>` | Has the judge read the plan as its builder would and asks you what is missing. Proposes a milestone cut and waits for your OK. Then writes the milestone folders, `STATUS.md` and task packs for the first milestone. `/dragonhoard:shape M2` writes the next milestone's packs when it comes up. |
+| `/dragonhoard:next` | Works exactly one task through the loop, records real evidence, has it reviewed, and stops. |
 | `/dragonhoard:quick "<fix>"` | A small fix with no milestones: the same loop (lessons, failing test first, checks, journal) as one quick task `Q<nn>`. Hands off to `shape` if it grows. |
 | `/dragonhoard:explore` | For an open choice: cheap parallel retrieval, up to 3 parallel spikes in isolated worktrees, a comparison by a frontier model. You pick; the decision is logged. |
 | `/dragonhoard:learn` | Drafts lessons from journals, screens them deterministically, has the judge review them, then asks you to approve each. `revoke L<nn>` removes one. |
 | `/dragonhoard:models` | The current model suggests which model fits each role, using the host's model list and the journey's evidence; you confirm. |
-| `/dragonhoard:conduct` | Hybrid mode only. Delegates each task to the OpenCode builder, judges its requests, verifies every result (`dragonhoard.py verify`), escalates repeated failures, and runs gates. |
+| `/dragonhoard:conduct` | Claude Code. Runs task after task to the gate: gives each one to a fresh builder (a subagent in solo, OpenCode in hybrid), answers its judge requests, then verifies, reviews and checkpoints the result. Escalates repeated failures and runs gates. |
 
 On other hosts the commands are the skills `dragonhoard-init`, `dragonhoard-next`, and so on.
 
@@ -202,7 +210,9 @@ model suggests a mapping with `/dragonhoard:models` and you confirm it.
 |---|---|---|---|
 | `scout` | fast, cheap, reliable tool use | haiku | Read-only fact retrieval with sources. Run in parallel. |
 | `spiker` | solid coding at mid cost | sonnet | One throwaway prototype per option, each in its own git worktree. |
-| `judge` | strongest available reasoning | opus | Compares spike evidence and reviews lessons. Advises only: it can add warnings, never approve. |
+| `judge` | strongest available reasoning | opus | Compares spike evidence, reviews lessons and checks a plan before it is shaped. Advises only: it can add warnings, never approve. |
+| `reviewer` | careful code reading at mid cost | sonnet | Reads one finished task's diff against its pack, in a fresh context. Never the session that built it. |
+| `builder` | solid coding at the lowest cost | sonnet | Only under `/dragonhoard:conduct`: builds one task per fresh context. In hybrid it is the OpenCode model you choose. |
 
 Other hosts start with no models set. On hosts that can't run a subagent on its own model, the
 judge step pauses and asks you to switch the session to the judge model.

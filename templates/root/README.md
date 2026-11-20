@@ -27,10 +27,12 @@ packs, so a coding agent loads only the context one task needs.
         └── M<n>-T<nn>-<slug>.journal.md  # append-only attempt log, created at first attempt
 ```
 
-## Session protocol (one task per session)
+## Session protocol (one task per context)
 
 1. **Pick.** `dragonhoard.py next` returns the task in progress, or the first `TODO` row of
    [STATUS.md](STATUS.md) whose dependencies are all `DONE`. Never take two tasks at once.
+   `dragonhoard.py lint <task>` must pass first: a pack that consumes a missing file or a later
+   task is stale, and the task is `BLOCKED` until the pack is amended.
 2. **Load exactly this context, nothing more:**
    - [CONSTITUTION.md](CONSTITUTION.md), [DIGEST.md](DIGEST.md) and [LESSONS.md](LESSONS.md)
    - the milestone `CONSTITUTION.md`
@@ -46,8 +48,14 @@ packs, so a coding agent loads only the context one task needs.
    | **Build** | Smallest change that satisfies acceptance. Stay inside the pack's file list. |
    | **Test** | Focused test, then the standard checks. Tick every acceptance item. |
    | **Record** | Journal entry, `PROGRESS.md` row with real output, `STATUS.md` row, event line, digest, `dragonhoard.py check`. |
+   | **Review** | `dragonhoard.py verify <task>`, then the reviewer role reads the diff against the pack. A `fix` verdict is a new attempt. |
 
-4. **Stop.** Report the next task. Commits are an owner action.
+4. **Stop.** Report the next task. Commits are an owner action; `dragonhoard.py checkpoint <task>`
+   makes one, and refuses unless verify and then review passed.
+
+The conduct skill (Claude Code) runs this protocol once per task, each in a fresh builder
+context, and goes on to the next task until a gate. It verifies, reviews and checkpoints every
+task itself.
 
 ### Standard checks
 
@@ -68,6 +76,12 @@ Stop and report `BLOCKED` when any of these happens:
 - the task needs an unapproved architectural change;
 - two bounded attempts at the same issue have failed. The journal is the evidence for this.
 
+A second attempt needs a root cause first: reproduce the failure, read the whole error, compare
+with the last green state, then test one hypothesis with one change.
+
+An owner request that breaks an article or a plan rule is a question, not an order
+(constitution article 18).
+
 ## Journal entry format
 
 Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier blocks.
@@ -85,21 +99,28 @@ Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier bl
 
 ## Event kinds (`logs/events.jsonl`)
 
-`task.started` · `attempt` · `option.chosen` · `task.blocked` · `task.done` · `gate.run` ·
-`lesson.approved` · `lesson.rejected` · `lesson.revoked` · `models.changed`.
+- Setup: `init` · `models.changed` · `mode.changed`.
+- Planning: `spec.approved` · `plan.checked` · `shape.approved` · `shape.milestone`.
+- Tasks: `task.started` · `attempt` · `option.chosen` · `owner.override` · `pack.amended` ·
+  `task.blocked` · `task.done` · `task.escalated` · `gate.run`.
+- Checking: `verify.passed` · `verify.failed` · `review.passed` · `review.failed`.
+- Lessons: `lesson.approved` · `lesson.rejected` · `lesson.revoked`.
+- Hybrid builder: `delegate.started` · `delegate.done` · `delegate.rate_limited` ·
+  `delegate.out_of_credit`.
 
 The journal explains *why*; the event log lets the next session see *what happened* across the
 whole journey without reading every journal. `DIGEST.md` is the compact view of both.
 
 ## Roles and models
 
-Three roles help the main session. Their models live in `dragonhoard.json` under `models`.
+Four roles help the main session. Their models live in `dragonhoard.json` under `models`.
 
 | Role | Used in | Needs |
 |---|---|---|
 | `scout` | Explore: fact retrieval | fast, cheap, reliable tool use |
 | `spiker` | Explore: one throwaway prototype per option | solid coding at mid cost |
 | `judge` | Explore comparison, lesson review | strongest available reasoning |
+| `reviewer` | After verify: one task's diff against its pack | careful code reading at mid cost, fresh context |
 
 - `dragonhoard.py models` shows the current mapping and what each role needs.
 - The models skill has the current model suggest a mapping; the owner confirms it.

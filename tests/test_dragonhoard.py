@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -72,6 +73,63 @@ def test_mismatch_and_missing(tmp: Path) -> None:
     (tmp / "src" / "a.py").write_text("")
     rows = [{"task": "M1-T01", "status": "DONE", "changes": "`src/a.py`, `src/b.py:12`, `<x>/y`"}]
     assert dragonhoard.missing_files(rows, tmp) == ["M1-T01: src/b.py"]
+
+
+def test_patterns(tmp: Path) -> None:
+    for name in (".env", "a/.env", ".env.local", ".env.production", "x.pem", "x.key", "x.p12", "x.pfx", "id_rsa",
+                 "id_dsa", "id_ecdsa", "id_ed25519", "k/id_ed25519", ".netrc", "a/.netrc", "credentials.json",
+                 "a/credentials.json"):
+        assert dragonhoard.SECRET_FILE.search(name), name
+    for name in (".env.example", ".env.sample", ".env.template", ".env.dist", "src/environment.py", "docs/keys.md",
+                 ".npmrc", ".envrc", "src/key.py", "id_rsa.pub"):
+        assert not dragonhoard.SECRET_FILE.search(name), name
+    for text in ("402 Payment Required: insufficient credits", "Payment Required", "Insufficient balance",
+                 '{"statusCode": 402, "message": "x"}', '"status": 402', "HTTP 402"):
+        assert dragonhoard.OUT_OF_CREDIT.search(text), text
+    for text in ("Rate limit exceeded: 402 tokens per minute", "retry in 402 ms", "4020"):
+        assert not dragonhoard.OUT_OF_CREDIT.search(text), text
+    import subprocess
+    sh = lambda *a: subprocess.run(["git", *a], cwd=tmp, check=True, capture_output=True)  # noqa: E731
+    sh("init", "-q")
+    sh("config", "user.name", "t")
+    sh("config", "user.email", "t@t")
+    (tmp / "old.txt").write_text("x")
+    sh("add", "old.txt")
+    sh("commit", "-q", "-m", "i")
+    sh("mv", "old.txt", "new.txt")
+    (tmp / "my dir").mkdir()
+    (tmp / "my dir/a b.txt").write_text("y")
+    assert sorted(dragonhoard.pending_files(tmp)) == ["my dir/a b.txt", "new.txt"], dragonhoard.pending_files(tmp)
+
+
+def test_lint(tmp: Path) -> None:
+    assert run("--project", str(tmp), "init", "--root", "impl")[0] == 0
+    (tmp / "impl/STATUS.md").write_text(STATUS)
+    (tmp / "src").mkdir()
+    (tmp / "src/a.py").write_text("one\ntwo\n")
+    pack = tmp / "impl/M1-a/tasks/M1-T02-b.md"
+    pack.parent.mkdir(parents=True)
+    project = ["--project", str(tmp)]
+    pack.write_text("- **Files:** `src/b.py` + `tests/test_b.py`\n- **Consumes:** `load()` at `src/a.py:2`;\n"
+                    "  `save()` from M1-T03 at `src/later.py`\n- **Produces:** `b()`\n")
+    code, out = run(*project, "lint")
+    assert code == 1 and "M1-T02: consumes M1-T03: it comes later" in out and "1 packs | 1 problems" in out, out
+    pack.write_text("- **Files:** `src/b.py`\n- **Consumes:** M1-T03 will add\n    `src/later.py` (planned)\n"
+                    "  - `src/a.py:2`\n")
+    out = run(*project, "lint", "M1-T02")[1]
+    assert "M1-T03: it comes later" in out and "src/later.py: missing" not in out, out
+    pack.write_text("- **Files:** `src/b.py`\n- **Consumes:** `src/a.py:9`, `src/gone.py::f`\n"
+                    "  - M9-T01 `src/x.py`\n  - M1-T01 `src/done.py`\n")
+    out = run(*project, "lint", "M1-T02")[1]
+    for problem in ("src/a.py:9: the file is shorter", "src/gone.py: missing", "M9-T01: not in STATUS.md",
+                    "src/done.py: missing"):  # M1-T01 is DONE, so what it produced must exist
+        assert problem in out, (problem, out)
+    assert "src/x.py" not in out  # planned by a task that is not done: not checked yet
+    pack.write_text("- **Files:** `a/1.py`, `a/2.py`, `a/3.py`, `a/4.py` + `tests/test_a.py`\n- **Consumes:** none\n")
+    assert "4 implementation files" in run(*project, "lint")[1]
+    pack.write_text("- **Files:** `src/b.py` + `tests/test_b.py`\n- **Consumes:** `src/a.py:2`\n")
+    assert run(*project, "lint") == (0, "lint: PASS | 1 packs | 0 problems\n")
+    assert run(*project, "lint", "M1-T03")[0] == 1 and run(*project, "lint", "M7-T01")[0] == 1  # no pack; unknown
 
 
 def test_end_to_end(tmp: Path) -> None:
@@ -156,6 +214,9 @@ def test_hosts(tmp: Path) -> None:
     assert "CLAUDE_PLUGIN_ROOT" not in skill and "dragonhoard:" not in skill
     judge = (oc / ".opencode/agents/dragonhoard-judge.md").read_text()
     assert "mode: subagent" in judge and "edit: deny" in judge and "model:" not in judge  # unset
+    reviewer = (oc / ".opencode/agents/dragonhoard-reviewer.md").read_text()
+    assert "edit: deny" in reviewer and "bash: allow" in reviewer and "Verdict: approve | fix" in reviewer
+    assert "path of the task pack" in run("--project", str(oc), "role", "reviewer")[1]
     assert (oc / ".dragonhoard/scripts/dragonhoard.py").is_file()
     assert run("--project", str(oc), "install", "--host", "opencode")[0] == 0  # idempotent
     agents_md = (oc / "AGENTS.md").read_text()
@@ -204,6 +265,7 @@ def test_hosts(tmp: Path) -> None:
         assert "no role subagents" in (folder / rules).read_text().lower()
         assert run("--project", str(folder), "role", "judge")[1].startswith("PAUSE")
         assert "git worktree add" in run("--project", str(folder), "role", "spiker")[1]
+        assert "SKIP the review" in run("--project", str(folder), "role", "reviewer")[1]
 
     # claude-code keeps its tier aliases and warns on anything else
     cc = tmp / "cc"
@@ -211,6 +273,13 @@ def test_hosts(tmp: Path) -> None:
     run("--project", str(cc), "init", "--root", "implementation")
     assert "model `opus`" in run("--project", str(cc), "role", "judge")[1]
     assert 'isolation: "worktree"' in run("--project", str(cc), "role", "spiker")[1]
+    assert "`dragonhoard:reviewer` with model `sonnet`" in run("--project", str(cc), "role", "reviewer")[1]
+    out = run("--project", str(cc), "role", "builder")[1]  # solo conduct: a builder subagent per task
+    assert "`dragonhoard:builder` with model `sonnet`" in out and "skills/next/SKILL.md" in out and "SendMessage" in out
+    assert "/dragonhoard:conduct" in run("--project", str(cc), "hook")[1]
+    assert "no builder role" in run("--project", str(tmp / "generic"), "role", "builder")[1]
+    assert "builder" not in dragonhoard.role_models({"host": "generic", "mode": "solo", "models": {}})
+    assert not (oc / ".opencode/agents/dragonhoard-builder.md").exists()  # never rendered as a host agent
     assert "warning" in run("--project", str(cc), "models", "--set", "judge=some-other-model")[1]
 
 
@@ -230,8 +299,8 @@ def emit(kind, **part):
 emit("step_start")
 if behaviour == "hang":
     time.sleep(30)
-if behaviour in ("quota", "novariant"):
-    message = "Rate limit exceeded. Please try again later." if behaviour == "quota" else "Variant unavailable for x: xhigh"
+if behaviour in ("quota", "novariant", "nocredit"):
+    message = {"quota": "Rate limit exceeded. Please try again later.", "nocredit": "402 Payment Required: insufficient credits"}.get(behaviour, "Variant unavailable for x: xhigh")
     print(json.dumps({"type": "error", "sessionID": "ses_stub1234", "error": {"type": "provider.quota" if behaviour == "quota" else "provider.no-route", "message": message}}), flush=True)
     sys.exit(0)
 emit("step_finish", tokens={"input": 10, "output": 5, "reasoning": 1, "cache": {"read": 100}}, cost=0)
@@ -246,9 +315,10 @@ def test_hybrid(tmp: Path) -> None:
     sh("git", "init", "-q")
     assert run("--project", str(tmp), "init", "--root", "impl", "--mode", "hybrid", "--check", "test -f src/a.js")[0] == 0
     assert json.loads((tmp / "dragonhoard.json").read_text())["mode"] == "hybrid"
-    pause = run("--project", str(tmp), "role", "judge")[1]
-    assert pause.startswith("PAUSE") and "status JUDGE" in pause
+    judge = run("--project", str(tmp), "role", "judge")[1]  # the plugin CLI is the orchestrator
+    assert judge.startswith("You are the judge") and "agents/judge.md" in judge
     assert "delegate" in run("--project", str(tmp), "role", "builder")[1]
+    assert dragonhoard.role_models({"host": "claude-code", "mode": "hybrid", "models": {}})["builder"] is None  # no alias for OpenCode
     (tmp / "opencode.json").write_text('{"mcp": {"obsidian": {"enabled": false}}, "plugin": ["p.mjs"]}')
     assert run("--project", str(tmp), "install", "--host", "opencode", "--mcp-off", "obsidian,exa")[0] == 0
     oc = json.loads((tmp / "opencode.json").read_text())
@@ -258,6 +328,13 @@ def test_hybrid(tmp: Path) -> None:
     assert set(oc["mcp"]) == {"obsidian", "exa"} and oc["plugin"] == ["p.mjs"]  # partial entry repaired, other keys kept
     assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
     assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
+    assert not (tmp / ".opencode/agents/dragonhoard-reviewer.md").exists()  # the orchestrator reviews
+    review = run("--project", str(tmp), "role", "reviewer")[1]
+    assert "dragonhoard:reviewer" in review and "never this session" in review
+    vendored = lambda role: subprocess.run([sys.executable, str(tmp / ".dragonhoard/scripts/dragonhoard.py"),  # noqa: E731
+                                            "--project", str(tmp), "role", role], capture_output=True, text=True).stdout
+    assert vendored("judge").startswith("PAUSE") and "status JUDGE" in vendored("judge")  # the builder's copy
+    assert vendored("reviewer").startswith("SKIP verify and review")
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
     assert not (tmp / ".opencode/skills/dragonhoard-conduct").exists()  # orchestrator-only skill
     assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
@@ -299,6 +376,16 @@ def test_hybrid(tmp: Path) -> None:
     assert "FAIL  scope" in run("--project", str(tmp), "verify", "M1-T01")[1]
     journal.write_text(journal.read_text() + "- Also changed `src/extra.js` (reported).\n")
     assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0  # a reported extra is the owner's call
+    explained = journal.read_text()
+    journal.write_text(explained + "## Attempt 2\n- Ran: `npm test` -> 1 failing\n- Outcome: FAIL\n- Root cause (if FAIL):\n")
+    assert "FAIL  journal: FAIL without a root cause: ['Attempt 2']" in run("--project", str(tmp), "verify", "M1-T01")[1]
+    journal.write_text(explained + "## Attempt 2\n- Outcome: FAIL\n- Root cause (if FAIL): off-by-one in `a()`\n")
+    assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0
+    journal.write_text(explained + "## Attempt 2\n- **Outcome:** FAIL\n- **Root cause (if FAIL):** off-by-one\n")
+    assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0
+    journal.write_text(explained + "## Attempt 2\n- **Outcome:** FAIL\n- **Root cause (if FAIL):**\n")
+    assert "FAIL  journal" in run("--project", str(tmp), "verify", "M1-T01")[1]
+    journal.write_text(explained)
     (tmp / "src/a.js").unlink()
     assert "FAIL  check `test -f src/a.js`" in run("--project", str(tmp), "verify", "M1-T01")[1]
 
@@ -347,17 +434,83 @@ def test_hybrid(tmp: Path) -> None:
     (stub_dir / "calls.txt").unlink()
     code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--quota-wait", "0", "--quota-patience", "0")
     assert code == 3 and "RATE-LIMITED: Rate limit exceeded" in out, out
+    # a spending cap is not a rate limit: no waiting, no retries
+    (stub_dir / "script.txt").write_text("nocredit,ok")
+    (stub_dir / "calls.txt").unlink()
+    code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--quota-wait", "0")
+    assert code == 4 and "OUT-OF-CREDIT: 402 Payment Required" in out, out
+    assert len((stub_dir / "calls.txt").read_text().splitlines()) == 1
+    assert "delegate.out_of_credit" in (tmp / "impl/logs/events.jsonl").read_text()
+    # checkpoint: no commit until verify, and then review, have passed
+    project = ["--project", str(tmp)]
+    sh("git", "config", "user.name", "t")
+    sh("git", "config", "user.email", "t@t")
+    head = lambda: sh("git", "log", "-1", "--format=%s").stdout.decode().strip()  # noqa: E731
+    assert "the last verify did not pass" in run(*project, "checkpoint", "M1-T01")[1]  # src/a.js is gone
+    (tmp / "src/a.js").write_text("export const a = () => 1;\n")
+    assert run(*project, "verify", "M1-T01")[0] == 0
+    assert "no review.passed" in run(*project, "checkpoint", "M1-T01")[1]
+    run(*project, "log", "M1-T01", "review.passed", "0 findings")
+    run(*project, "log", "M1-T01", "review.failed", "important | src/a.js:1 | wrong")
+    assert "no review.passed" in run(*project, "checkpoint", "M1-T01")[1]  # the latest review decides
+    run(*project, "log", "M1-T01", "review.passed", "fixed")
+    old = (tmp / "src/a.js").read_text()
+    (tmp / "src/a.js").write_text(old + "// late edit\n")
+    assert "the work changed since the last verify" in run(*project, "checkpoint", "M1-T01")[1]
+    (tmp / "src/a.js").write_text(old)
+    assert '"tree": "' in (tmp / "impl/logs/events.jsonl").read_text()
+    (tmp / ".env").write_text("KEY=1")
+    assert "['.env']" in run(*project, "checkpoint", "M1-T01")[1] and head() == "base"
+    (tmp / ".env").unlink()
+    code, out = run(*project, "checkpoint", "M1-T01")
+    assert code == 0 and head() == "checkpoint M1-T01: t", out
+    assert "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
+    run(*project, "log", "-", "gate.run", "G1 PASSED")  # only dragonhoard's own files changed: no new verify needed
+    assert run(*project, "checkpoint", "M1-T01")[0] == 0 and "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
+    assert "not in STATUS.md" in run(*project, "checkpoint", "M9-T09")[1]
+    assert "G1 is not in STATUS.md" in run(*project, "checkpoint", "G1")[1]
+    with (tmp / "impl/STATUS.md").open("a") as f:
+        f.write("\n| Gate | Status | Detail |\n|---|---|---|\n| G1 | PASSED 2026-11-20 | x |\n")
+    (tmp / "src/stray.js").write_text("x\n")
+    before = head()
+    assert "task work is pending: ['src/stray.js']" in run(*project, "checkpoint", "G1")[1] and head() == before
+    (tmp / "src/stray.js").unlink()
+    assert run(*project, "checkpoint", "G1")[0] == 0 and head() == "checkpoint G1: PASSED 2026-11-20"
+    assert "nothing to commit" in run(*project, "checkpoint", "G1")[1]
     assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
     assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"
     assert dragonhoard.parse_handoff("HANDOFF\nstatus: maybe\n") is None
 
 
+def test_skills() -> None:
+    """The skills and the CLI are written apart; this keeps them from drifting apart."""
+    plugin = Path(dragonhoard.__file__).resolve().parents[1]
+    source = Path(dragonhoard.__file__).read_text()
+    documented = (plugin / "templates/root/README.md").read_text().split("## Event kinds")[1].split("\n## ")[0]
+    prose = ""
+    for skill in sorted(plugin.glob("skills/*/SKILL.md")):
+        front, body = dragonhoard.split_frontmatter(skill.read_text())
+        assert f"name: {skill.parent.name}\n" in front + "\n", skill
+        assert dragonhoard.frontmatter_description(front), skill
+        prose += body
+    prose += "".join(agent.read_text() for agent in plugin.glob("agents/*.md"))
+    for command in set(re.findall(r"dragonhoard\.py ([a-z]+)", prose)):
+        assert f'add_parser("{command}")' in source, f"a skill names `dragonhoard.py {command}`, which does not exist"
+    logged = set(re.findall(r"dragonhoard\.py log \S+ ([a-z]+\.[a-z_]+)", prose))
+    emitted = set(re.findall(r'"kind": "([a-z._]+)"', source)) | {"verify.passed", "lesson.approved"}
+    for kind in logged | emitted:
+        assert f"`{kind}`" in documented, f"event kind {kind} is not in the README template's list"
+    for role in dragonhoard.ROLES:
+        assert (plugin / "agents" / f"{role}.md").is_file(), role
+
+
 def test_stats() -> None:
     ev = lambda ts, task, kind: {"ts": ts, "task": task, "kind": kind, "summary": "", "ref": ""}
     events = [ev("1", "M1-T01", "task.started"), ev("2", "M1-T01", "task.done"),
               ev("3", "M1-T02", "verify.failed"), ev("4", "M1-T02", "task.done"),
-              ev("6", "M2-T01", "task.started"), ev("7", "M2-T01", "task.done"), ev("8", "-", "init")]
+              ev("6", "M2-T01", "task.started"), ev("7", "M2-T01", "review.failed"), ev("7", "M2-T01", "review.passed"),
+              ev("7", "M2-T01", "task.done"), ev("8", "-", "init")]
     ledger = [{"ts": "5", "id": "L01", "status": "approved"}, {"ts": "5", "id": "L02", "status": "approved"},
               {"ts": "5", "id": "L03", "status": "rejected"}, {"ts": "5", "id": "L02", "status": "revoked"}]
     journals = {"M1-T01-a.journal.md": "no lesson", "M2-T01-b.journal.md": "followed L01",
@@ -366,6 +519,7 @@ def test_stats() -> None:
     assert (m1["milestone"], m1["done"], m1["first_pass"], m1["first_pass_pct"]) == ("M1", 2, 1, 50), m1
     assert m1["lessons_in_force"] == 0 and m1["journals"] == 1 and m1["journals_citing"] == 0
     assert m2["lessons_in_force"] == 1 and m2["journals"] == 2 and m2["journals_citing"] == 1, m2  # L02 revoked
+    assert (m1["reviewed"], m2["reviewed"], m2["review_fixes"], m2["first_pass"]) == (0, 1, 1, 0)  # sent back: not first pass
     assert dragonhoard.learning_stats([], [], {}) == []
 
 
@@ -373,6 +527,9 @@ if __name__ == "__main__":
     test_tables_and_next()
     test_screen()
     test_stats()
+    test_skills()
+    with tempfile.TemporaryDirectory() as folder:
+        test_patterns(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
         test_hosts(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
@@ -380,6 +537,8 @@ if __name__ == "__main__":
         test_hybrid(Path(folder) / "repo")
     with tempfile.TemporaryDirectory() as folder:
         test_mismatch_and_missing(Path(folder))
+    with tempfile.TemporaryDirectory() as folder:
+        test_lint(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
         test_end_to_end(Path(folder))
     print("ok")

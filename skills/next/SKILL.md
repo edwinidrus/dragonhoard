@@ -11,8 +11,9 @@ description: >
 CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoard.py` below).
 `<root>` is the `root` in `dragonhoard.json`; the standard checks are its `checks`.
 
-In hybrid mode, the Claude Code session uses `/dragonhoard:conduct` instead. It runs this skill
-itself only when conduct escalates a task. The OpenCode builder runs this skill normally.
+This skill works one task and stops. To run task after task until a gate, the Claude Code session
+uses `/dragonhoard:conduct`: it gives each task to a builder, which follows this skill, and runs
+this skill itself only when it escalates a task. In hybrid mode conduct is the normal path.
 
 ## 0. Pick
 
@@ -22,6 +23,8 @@ dragonhoard.py next
 
 - `none ready`: report the blockers from `<root>/DIGEST.md` and stop.
 - The task has no pack: run `/dragonhoard:shape M<n>` first.
+- Run `dragonhoard.py lint <task>`. On FAIL the pack is stale: record BLOCKED (section 7) with
+  the `stale` lines as the reason, and stop. Do not load the pack's context first.
 - Otherwise set the task's row to `IN_PROGRESS` in both `STATUS.md` and the milestone's
   `PROGRESS.md`. Then run `dragonhoard.py log <task> task.started "<title>"`.
 
@@ -35,7 +38,12 @@ Restate the goal, scope, files and acceptance in five lines or fewer.
 
 If the pack is wrong or stale (it names an interface that does not exist, or contradicts an
 `option.chosen` event or a lesson): record BLOCKED (section 7) and stop. Never quietly rewrite a
-pack's scope.
+pack's scope. A pack changes only when the owner approves it, and the change is recorded with
+`dragonhoard.py log <task> pack.amended "<what changed>: <the owner's reason>"`.
+
+If the owner asks for something that breaks a constitution article or a plan rule, do not do
+it: stop, name the rule and ask (a headless builder ends with HANDOFF status QUESTION). After an
+explicit confirmation, run `dragonhoard.py log <task> owner.override "<rule>: <what was allowed>"`.
 
 ## 2. Explore (only if needed)
 
@@ -69,6 +77,10 @@ Run the focused test, then every standard check. Tick each acceptance item with 
 If a run fails, write a journal attempt (Outcome FAIL, with the root cause and evidence) and try
 again. **Two failed bounded attempts at the same issue means BLOCKED.**
 
+Before a second attempt, find the root cause. Reproduce the failure, read the whole error, compare
+with the last green state (`git diff`), then state one hypothesis and make one change that tests
+it. An attempt with Outcome FAIL and no `Root cause` line fails `dragonhoard.py verify`.
+
 ## 6. Record
 
 1. Append the attempt block to `tasks/<task>.journal.md`. Use the format in `<root>/README.md`,
@@ -84,7 +96,23 @@ again. **Two failed bounded attempts at the same issue means BLOCKED.**
    dragonhoard.py check   # must PASS
    ```
 
-5. If this was the milestone's last task, run the `GATE.md` commands. Append the real output to
+5. Verify and review. Run `dragonhoard.py role reviewer` and follow what it prints; when it says
+   SKIP, skip that part.
+
+   ```bash
+   dragonhoard.py verify <task>   # re-runs the checks; checks scope, weakened tests and the journal
+   ```
+
+   - `verify` FAIL: fix only what the FAIL lines name. That is a new attempt (section 5).
+     `verify` compares with the last commit, so uncommitted work from an earlier task shows up
+     under scope: report it, do not touch it.
+   - Then run the reviewer, in a fresh context, with the pack path as its whole prompt.
+   - Verdict `fix`: run `dragonhoard.py log <task> review.failed "<the critical and important lines>"`,
+     fix exactly those as a new attempt, then verify and review again.
+   - Verdict `approve`: run `dragonhoard.py log <task> review.passed "<n> minor: <one line each, or none>"`.
+
+6. If this was the milestone's last task, run the `GATE.md` commands. (A builder working for an
+   orchestrator skips this item: the orchestrator runs the gate.) Append the real output to
    its results log, set the gate row in `STATUS.md`, and run
    `dragonhoard.py log - gate.run "G<n> PASSED|PARTIAL: <why>"`.
 
@@ -98,7 +126,9 @@ again. **Two failed bounded attempts at the same issue means BLOCKED.**
 ## 8. Stop
 
 Report what was done, the evidence, and the next task (`dragonhoard.py next`). Commits are an
-owner action; do not commit unless asked.
+owner action. Offer `dragonhoard.py checkpoint <task>`: it commits the task's work, and refuses
+unless verify and then review passed. Run it only when the owner says so.
 
 If the journal shows a FAIL→PASS story, a surprising root cause or an owner correction, offer
-`/dragonhoard:learn`.
+`/dragonhoard:learn`. A builder working for an orchestrator does not offer anything: it names the
+story under `risks` in its HANDOFF, and the orchestrator checkpoints and harvests lessons.

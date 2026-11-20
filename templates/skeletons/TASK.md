@@ -4,7 +4,6 @@
 
 | Field | Value |
 |---|---|
-| Status | TODO |
 | Depends on | <task IDs / gate> |
 | Milestone constitution | [../CONSTITUTION.md](../CONSTITUTION.md) (inherits [global](../../CONSTITUTION.md)) |
 | Plan source | <plan file> §<section> |

@@ -51,8 +51,8 @@ CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoa
 
 6. **Project articles.** Ask whether the project has hard constraints worth adding to
    `<root>/CONSTITUTION.md`. Examples: allowed dependencies, data conventions, a storage choice,
-   security rules. Append each one the owner confirms as a new numbered article after section
-   VII. Do not add generic advice.
+   security rules. Append each one the owner confirms as a new numbered article after the last
+   section. Do not add generic advice.
 
 7. **Hybrid only: set up the builder.**
    - List the MCP servers OpenCode would load (`opencode mcp list`). Ask the owner which ones the
@@ -69,9 +69,9 @@ CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoa
    - The judge stays external: you are the judge.
 
 8. **Role models.** Run `/dragonhoard:models`. The current model suggests a model for each role,
-   and the owner confirms. Solo has scout, spiker and judge. Hybrid has builder, scout and
-   spiker; for those, see `opencode models`, where models marked `free` cost nothing.
+   and the owner confirms. Solo has scout, spiker, judge and reviewer, plus the builder that
+   `/dragonhoard:conduct` uses. Hybrid has builder, scout and spiker; for those, see `opencode models`, where models marked `free` cost nothing.
 
 9. **Hand off.** Show the dragon banner the command printed. Then suggest `/dragonhoard:shape
-   <plan file>` as the next step. In hybrid, shaping also runs through `/dragonhoard:conduct`, so
+   <plan file>` as the next step, or `/dragonhoard:spec` when there is no written plan yet. In hybrid, shaping also runs through `/dragonhoard:conduct`, so
    the builder writes the packs and you review them.

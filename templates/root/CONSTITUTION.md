@@ -23,7 +23,8 @@ The owner decides; the coding agent does not. Add project-specific articles belo
 
 ## III. Scope
 
-7. **One task per session.** 1–3 implementation files plus one focused test file. Split a task
+7. **One task per context.** A session, or a builder started by the conduct skill, works exactly
+   one task: 1–3 implementation files plus one focused test file. Split a task
    rather than exceed this. Never build a later milestone's feature early.
 8. **The pack is the contract.** Stay inside its file list. If the pack is wrong, stop and
    report; do not silently widen scope.
@@ -55,3 +56,10 @@ The owner decides; the coding agent does not. Add project-specific articles belo
 
 17. **Never print, log, commit or paste a secret value**, including in journals, `PROGRESS.md`,
     events and lessons.
+
+## VIII. Owner instructions
+
+18. **An instruction that breaks a rule is a question, not an order.** When the owner asks for
+    something that breaks an article here, a milestone article or a rule in the plan, do not do
+    it. Stop, name the rule, and ask. Continue only after the owner confirms in so many words,
+    and record it as an `owner.override` event.

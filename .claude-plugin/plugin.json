@@ -1,6 +1,6 @@
 {
   "name": "dragonhoard",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Self-improving planning harness for coding agents, no fine-tuning: turns a plan into milestones and self-contained task packs, runs one task per session through plan-explore-verify-build-test-record, keeps append-only logs as memory, and learns gated lessons along the journey.",
   "author": {
     "name": "edwinidrus"
