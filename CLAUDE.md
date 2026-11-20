@@ -47,7 +47,8 @@ The work is split between two halves:
   - the append-only `events.jsonl` and `lessons.jsonl`;
   - `DIGEST.md` (capped at 150 lines) and `LESSONS.md`, both generated;
   - STATUS/PROGRESS consistency and missing-file checks (`check`), and stale packs (`lint`);
-  - the commit gate (`checkpoint`: only after `verify.passed`, then `review.passed`);
+  - the commit gate (`checkpoint`: only after `verify.passed`, then `review.passed`, on the same
+    work that was verified; `checkpoint G<n>` for a gate's record);
   - the deterministic lesson screen;
   - the learning scorecard (`stats`: first-pass rate, lessons in force, journals citing a lesson).
 
@@ -101,8 +102,9 @@ changes.
     block.
   - `verify` re-runs the checks, plus scope, test-weakening and journal checks.
   - The `builder` is the OpenCode main session, and `judge` and `reviewer` default to `external`
-    (`ORCHESTRATOR_ROLES`). An external role gets no agent file; `role judge` tells the builder to
-    stop with a JUDGE handoff.
+    (`ORCHESTRATOR_ROLES`). An external role gets no agent file. `role <name>` answers by caller:
+    the vendored CLI is the builder (stop with a JUDGE handoff, skip the review), the plugin's CLI
+    is the orchestrator (you are the judge, spawn the reviewer).
   - `install --host opencode` in hybrid also merges `opencode.json`: no `ask` rules (they hang
     headless), git commits denied, skill/task allow-lists, `--mcp-off`.
   - `conduct` is orchestrator-only and is never rendered into a builder host

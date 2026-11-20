@@ -24,6 +24,9 @@ another's context. You keep the judgement and the checks. Hard rules:
   amendments, rule overrides. Ask with AskUserQuestion. Relay the builder's evidence in a few
   lines, not its whole reply.
 - Do not stop between tasks to ask whether to continue. Stop only for the reasons in step 6.
+- Roles: always run `dragonhoard.py role <judge|reviewer>` and do what it prints. It knows the
+  mode: in hybrid it tells you that you are the judge yourself. This also holds inside skills you
+  run yourself (`shape`, `explore`, `learn`).
 
 ## 0. Before the first task
 
@@ -60,9 +63,8 @@ treat the result like any other HANDOFF.
 ## 2. Act on the HANDOFF status
 
 - **JUDGE**: the builder needs a judgement or an explored choice.
-  - A request to compare evidence, review lessons or check a plan: read the evidence paths it names, and only
-    those. In hybrid you are the judge: apply `${CLAUDE_PLUGIN_ROOT}/agents/judge.md`. In solo,
-    run the judge as `dragonhoard.py role judge` says.
+  - A request to compare evidence, review lessons or check a plan: read the evidence paths it
+    names, and only those. Run `dragonhoard.py role judge` and do what it prints.
   - An open choice with no evidence yet: run `/dragonhoard:explore` yourself; the owner picks.
   - Reply in the same session with the verdict or the choice.
 - **QUESTION**: ask the owner, then reply in the same session with the answer. This includes a
@@ -98,10 +100,9 @@ tests, a missing journal and a failed attempt with no root cause.
 - **verify FAIL**: reply in the same session:
   `"verify failed: <the FAIL lines>. Fix only that, then end with the HANDOFF block."` This is
   attempt 2.
-- **verify PASS**: review. Spawn the subagent `dragonhoard:reviewer` with the pack path as its
-  whole prompt, so the diff stays out of your context. Use the reviewer model that
-  `dragonhoard.py models` shows; when it shows `external`, use a mid-tier model, and a stronger
-  one for a risky diff.
+- **verify PASS**: review. Run `dragonhoard.py role reviewer` and do what it prints: it names the
+  reviewer subagent and its model. The pack path is the reviewer's whole prompt, so the diff
+  stays out of your context. Never review a task yourself.
   - Verdict `fix`: run `dragonhoard.py log <task> review.failed "<the critical and important lines>"`,
     then reply in the same session: `"review: <those lines>. Fix only these, then end with the
     HANDOFF block."` This is attempt 2. Verify and review again afterwards.
@@ -112,14 +113,17 @@ tests, a missing journal and a failed attempt with no root cause.
   dragonhoard.py checkpoint <task>        # refuses unless verify, then review, passed
   ```
 
+  It also refuses when the work changed after the last verify: then verify and review again.
+
   Tell the owner in one line what now works, and go straight to step 1.
 
 ## 4. Escalate after two failed attempts
 
 When the second attempt still fails verify or review, stop sending this task to the builder:
 1. Log it: `dragonhoard.py log <task> task.escalated "<why, in one line>"`.
-2. Work the task yourself in this session by following `/dragonhoard:next`. The reviewer still
-   reviews it, and the owner's decisions stay as usual.
+2. Work the task yourself in this session by following `/dragonhoard:next`, including its verify
+   and review step: the reviewer subagent reviews it, never you. The owner's decisions stay as
+   usual. Then checkpoint it as in step 3.
 3. Return to step 1 with the next task.
 
 An escalation rate above about one task in four means the builder model is too weak for this
@@ -128,13 +132,26 @@ plan. Offer `/dragonhoard:models` to pick a stronger builder.
 ## 5. Gates
 
 When a milestone's last task is done, or the builder reports PARTIAL for a gate:
-1. Run the commands in the milestone's `GATE.md` yourself, and record their results.
+1. Run the commands in the milestone's `GATE.md` yourself, and record their results. The builder
+   may have run them with the last task; as with verify, run them again instead of trusting the
+   record.
 2. Review the milestone as a whole before the owner tries it: one reviewer subagent on
-   `git diff <previous gate checkpoint>..HEAD`, looking for what per-task reviews cannot see
-   (pieces that do not fit together, duplicated logic across tasks). Send real findings back to
-   the builder as one task each.
-3. Ask the owner to do the hands-on checks in GATE.md. Then record the result: send the builder
-   `"Owner: G<n> <passed|failed>: <their notes>. Record it."`, and checkpoint.
+   `git diff <base>..HEAD`, looking for what per-task reviews cannot see (pieces that do not fit
+   together, duplicated logic across tasks). `<base>` is the previous gate's commit,
+   `git log --grep "^checkpoint G<n-1>" -1 --format=%h`; for the first milestone it is the parent
+   of that milestone's first task checkpoint.
+
+   Show the real findings to the owner. Each one the owner accepts becomes a new task in this
+   milestone, with a pack and a STATUS row written through the shape skill, so its fix is
+   verified, reviewed and checkpointed like any other task. The gate waits for those tasks.
+3. Ask the owner to do the hands-on checks in GATE.md. Then record the result. In hybrid, send
+   the builder `"Owner: G<n> <passed|failed>: <their notes>. Record it."`. In solo, record it
+   yourself: the results log in `GATE.md`, the gate row in `STATUS.md`, and
+   `dragonhoard.py log - gate.run "G<n> PASSED|PARTIAL: <why>"`. Then commit the record:
+
+   ```bash
+   dragonhoard.py checkpoint G<n>          # commits the gate record; refuses if task work is pending
+   ```
 4. Harvest lessons here, with `/dragonhoard:learn`, over this milestone's journals and its
    `verify.failed`, `review.failed` and `task.escalated` events. The owner approves each lesson.
    The builder never proposes or applies lessons. Approved lessons reach it through `DIGEST.md`

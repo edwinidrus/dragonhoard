@@ -23,6 +23,7 @@ and the lesson screen and ledger.
     dragonhoard.py delegate "<prompt>" [--session <id>]   # hybrid: one OpenCode builder turn
     dragonhoard.py verify M1-T01 [--base HEAD]            # independent re-check of a task
     dragonhoard.py checkpoint M1-T01                      # commit it, only after verify and review passed
+    dragonhoard.py checkpoint G1                          # commit a gate's record; no task work may be pending
 
 stdlib only. It never edits source or tests and never reads `.env`.
 """
@@ -922,6 +923,16 @@ def cmd_role(project: Path, args: argparse.Namespace) -> int:
     name = agent_name(host, role)
     worktree = ("one git worktree per option: `git worktree add ../<repo>-spike-<option> -b spike/<option>`; "
                 "the spike works only there and is never merged")
+    if model == EXTERNAL and not Path(__file__).resolve().is_relative_to(project):  # the orchestrator, not the builder
+        if role == "judge":
+            print(f"You are the judge: in hybrid mode this session answers it. Apply "
+                  f"{PLUGIN_ROOT / 'agents' / 'judge.md'} yourself, here, on this session's model.")
+            print(f"Journal: record `role {role} ran on <model> via orchestrator`.")
+        else:
+            print("Spawn subagent_type `dragonhoard:reviewer` on a mid-tier model, or a stronger one for a risky "
+                  "diff: a fresh context, never this session.")
+            print("Its prompt is the path of the task pack, nothing else. It reads the diff itself.")
+        return 0
     if role == "reviewer" and model == EXTERNAL:
         print("SKIP verify and review. The orchestrating session runs both on this task after your HANDOFF; "
               "never review your own work.")
@@ -1242,11 +1253,40 @@ OUT_OF_CREDIT = re.compile(r"Payment Required|insufficient (credits?|balance|fun
 
 
 def cmd_checkpoint(workspace: Workspace, args: argparse.Namespace) -> int:
-    """Commit a task's work, and only after verify and then review passed. It never pushes."""
+    """Commit a task's work, and only after verify and then review passed; or commit a gate's
+    record (`G<n>`), and only when no task work is pending. It never pushes."""
     project = workspace.project
-    row = next((r for r in status_rows(workspace.status_text()) if r["task"] == args.task), None)
+    gate = re.fullmatch(r"G\d+", args.task) is not None
+    if gate:
+        status = gate_rows(workspace.status_text()).get(args.task)
+        pending = pending_files(project)
+        secrets = sorted(f for f in pending if SECRET_FILE.search(f))
+        work = sorted(f for f in pending if not f.startswith(bookkeeping(workspace.config)))
+        reason = (f"{args.task} is not in STATUS.md" if status is None else "nothing to commit" if not pending
+                  else f"it would commit {secrets}; ignore or remove them first" if secrets
+                  else f"task work is pending: {work}; checkpoint its task first" if work else "")
+        title = status
+    else:
+        reason, title = checkpoint_reason(workspace, args.task)
+    if reason:
+        print(f"checkpoint REFUSED: {reason}")
+        return 1
+    subprocess.run(["git", "add", "-A"], cwd=project, check=True)
+    done = subprocess.run(["git", "commit", "-q", "-m", f"checkpoint {args.task}: {title}"],
+                          cwd=project, capture_output=True, text=True)
+    if done.returncode != 0:
+        print(f"checkpoint FAILED: {(done.stdout + done.stderr).strip().splitlines()[-1:]}")
+        return 1
+    print(f"checkpoint {args.task}: {git(project, 'log', '-1', '--format=%h %s').strip()}")
+    return 0
+
+
+def checkpoint_reason(workspace: Workspace, task: str) -> tuple[str, str]:
+    """Why a task cannot be checkpointed ("" when it can), and the task's title."""
+    project = workspace.project
+    row = next((r for r in status_rows(workspace.status_text()) if r["task"] == task), None)
     events = [e for e in read_jsonl(workspace.events)
-              if e["task"] == args.task and e["kind"].startswith(("verify.", "review."))]
+              if e["task"] == task and e["kind"].startswith(("verify.", "review."))]
     kinds = [e["kind"] for e in events]
     verified = max((i for i, kind in enumerate(kinds) if kind.startswith("verify.")), default=-1)
     reviews = [kind for kind in kinds[verified + 1:] if kind.startswith("review.")]
@@ -1255,24 +1295,14 @@ def cmd_checkpoint(workspace: Workspace, args: argparse.Namespace) -> int:
     work = [f for f in pending if not f.startswith(skip)]  # dragonhoard's own files need no new verify
     tree = events[verified].get("tree") if verified >= 0 else None
     secrets = sorted(f for f in pending if SECRET_FILE.search(f))
-    reason = (f"{args.task} is not in STATUS.md" if row is None
+    reason = (f"{task} is not in STATUS.md" if row is None
               else "the last verify did not pass" if verified < 0 or kinds[verified] != "verify.passed"
               else "no review.passed since the last verify" if reviews[-1:] != ["review.passed"]
               else "nothing to commit" if not pending
               else f"it would commit {secrets}; ignore or remove them first" if secrets
               else "the work changed since the last verify; run verify and the review again"
               if work and tree != tree_fingerprint(project, skip) else "")
-    if reason:
-        print(f"checkpoint REFUSED: {reason}")
-        return 1
-    subprocess.run(["git", "add", "-A"], cwd=project, check=True)
-    done = subprocess.run(["git", "commit", "-q", "-m", f"checkpoint {args.task}: {row['title']}"],
-                          cwd=project, capture_output=True, text=True)
-    if done.returncode != 0:
-        print(f"checkpoint FAILED: {(done.stdout + done.stderr).strip().splitlines()[-1:]}")
-        return 1
-    print(f"checkpoint {args.task}: {git(project, 'log', '-1', '--format=%h %s').strip()}")
-    return 0
+    return reason, row["title"] if row else ""
 
 
 def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:

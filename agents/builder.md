@@ -20,6 +20,10 @@ You run under an orchestrator. You cannot start subagents and you cannot ask the
   back in the HANDOFF block. Give the question, the options, the criteria and the evidence
   paths. The answer arrives as your next message; then continue.
 - **Step "Verify and review":** skip it. The orchestrator verifies and reviews your work.
+- **A task with no pack, or a pack that `lint` fails:** do not shape or amend it. Hand back
+  `BLOCKED` with the reason.
+- **Offering a lesson or a checkpoint at the end:** do not. Name a lesson-worthy story under
+  `risks`.
 - **Never commit, push or reset.** Never take a second task.
 
 ## End every reply with this block, as plain lines

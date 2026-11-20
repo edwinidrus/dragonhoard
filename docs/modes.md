@@ -8,7 +8,7 @@ can change it later with `dragonhoard.py mode <solo|hybrid> --why "..."`. The ch
 |---|---|---|
 | Who builds each task | this Claude Code session (`/dragonhoard:next`), or a `builder` subagent per task under `/dragonhoard:conduct` | a headless OpenCode session on the `builder` model, started by `dragonhoard.py delegate` |
 | Scout / spiker | Claude subagents (haiku / sonnet) | OpenCode subagents (`dragonhoard-scout`, `dragonhoard-spiker`), usually on the builder's model |
-| Judge | the opus judge subagent | **external**: the Claude Code session itself |
+| Judge | the opus judge subagent | **external**: the Claude Code session itself (`role judge` says so to the orchestrator, and tells the builder to hand off) |
 | Reviewer | a sonnet reviewer subagent, after every task | a reviewer subagent of the Claude Code session, after every task |
 | Verification | `dragonhoard.py verify` after every task: checks re-run, scope, weakened tests, journal | the same, run by the orchestrator, never by the builder |
 | Commits | yours, or `dragonhoard.py checkpoint <task>` once verify and review passed | `conduct` checkpoints each task; the builder cannot commit |
@@ -56,8 +56,11 @@ session. It stops only for a gate, an owner decision, a task that failed again a
 a rate limit or spending cap, or a context past about half.
 
 `dragonhoard.py checkpoint <task>` is the only way `conduct` commits. It refuses unless the
-task's last `verify` passed and a `review.passed` event follows it, and it refuses to commit
-files that look like secrets (`.env`, `*.pem`, `*.key`). It never pushes. Running `conduct` is
+task's last `verify` passed and a `review.passed` event follows it. `verify` records a
+fingerprint of the pending work, so a file edited after it makes `checkpoint` refuse until the
+task is verified and reviewed again. It also refuses to commit files that look like secrets
+(`.env`, `*.pem`, `*.key`, `id_rsa`, `.netrc`). `checkpoint G<n>` commits a gate's record, and
+only when no task work is pending. Neither form ever pushes. Running `conduct` is
 the owner's consent to these checkpoint commits on the current branch.
 
 ## Setup

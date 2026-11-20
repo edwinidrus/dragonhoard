@@ -315,8 +315,8 @@ def test_hybrid(tmp: Path) -> None:
     sh("git", "init", "-q")
     assert run("--project", str(tmp), "init", "--root", "impl", "--mode", "hybrid", "--check", "test -f src/a.js")[0] == 0
     assert json.loads((tmp / "dragonhoard.json").read_text())["mode"] == "hybrid"
-    pause = run("--project", str(tmp), "role", "judge")[1]
-    assert pause.startswith("PAUSE") and "status JUDGE" in pause
+    judge = run("--project", str(tmp), "role", "judge")[1]  # the plugin CLI is the orchestrator
+    assert judge.startswith("You are the judge") and "agents/judge.md" in judge
     assert "delegate" in run("--project", str(tmp), "role", "builder")[1]
     assert dragonhoard.role_models({"host": "claude-code", "mode": "hybrid", "models": {}})["builder"] is None  # no alias for OpenCode
     (tmp / "opencode.json").write_text('{"mcp": {"obsidian": {"enabled": false}}, "plugin": ["p.mjs"]}')
@@ -329,7 +329,12 @@ def test_hybrid(tmp: Path) -> None:
     assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
     assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
     assert not (tmp / ".opencode/agents/dragonhoard-reviewer.md").exists()  # the orchestrator reviews
-    assert run("--project", str(tmp), "role", "reviewer")[1].startswith("SKIP verify and review")
+    review = run("--project", str(tmp), "role", "reviewer")[1]
+    assert "dragonhoard:reviewer" in review and "never this session" in review
+    vendored = lambda role: subprocess.run([sys.executable, str(tmp / ".dragonhoard/scripts/dragonhoard.py"),  # noqa: E731
+                                            "--project", str(tmp), "role", role], capture_output=True, text=True).stdout
+    assert vendored("judge").startswith("PAUSE") and "status JUDGE" in vendored("judge")  # the builder's copy
+    assert vendored("reviewer").startswith("SKIP verify and review")
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
     assert not (tmp / ".opencode/skills/dragonhoard-conduct").exists()  # orchestrator-only skill
     assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
@@ -463,6 +468,15 @@ def test_hybrid(tmp: Path) -> None:
     run(*project, "log", "-", "gate.run", "G1 PASSED")  # only dragonhoard's own files changed: no new verify needed
     assert run(*project, "checkpoint", "M1-T01")[0] == 0 and "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
     assert "not in STATUS.md" in run(*project, "checkpoint", "M9-T09")[1]
+    assert "G1 is not in STATUS.md" in run(*project, "checkpoint", "G1")[1]
+    with (tmp / "impl/STATUS.md").open("a") as f:
+        f.write("\n| Gate | Status | Detail |\n|---|---|---|\n| G1 | PASSED 2026-11-20 | x |\n")
+    (tmp / "src/stray.js").write_text("x\n")
+    before = head()
+    assert "task work is pending: ['src/stray.js']" in run(*project, "checkpoint", "G1")[1] and head() == before
+    (tmp / "src/stray.js").unlink()
+    assert run(*project, "checkpoint", "G1")[0] == 0 and head() == "checkpoint G1: PASSED 2026-11-20"
+    assert "nothing to commit" in run(*project, "checkpoint", "G1")[1]
     assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
     assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"

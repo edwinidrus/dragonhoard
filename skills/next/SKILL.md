@@ -128,4 +128,5 @@ owner action. Offer `dragonhoard.py checkpoint <task>`: it commits the task's wo
 unless verify and then review passed. Run it only when the owner says so.
 
 If the journal shows a FAIL→PASS story, a surprising root cause or an owner correction, offer
-`/dragonhoard:learn`.
+`/dragonhoard:learn`. A builder working for an orchestrator does not offer anything: it names the
+story under `risks` in its HANDOFF, and the orchestrator checkpoints and harvests lessons.
