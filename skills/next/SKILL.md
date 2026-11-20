@@ -11,8 +11,9 @@ description: >
 CLI: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dragonhoard.py"` (called `dragonhoard.py` below).
 `<root>` is the `root` in `dragonhoard.json`; the standard checks are its `checks`.
 
-In hybrid mode, the Claude Code session uses `/dragonhoard:conduct` instead. It runs this skill
-itself only when conduct escalates a task. The OpenCode builder runs this skill normally.
+This skill works one task and stops. To run task after task until a gate, the Claude Code session
+uses `/dragonhoard:conduct`: it gives each task to a builder, which follows this skill, and runs
+this skill itself only when it escalates a task. In hybrid mode conduct is the normal path.
 
 ## 0. Pick
 

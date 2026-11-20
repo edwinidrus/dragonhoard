@@ -27,7 +27,7 @@ packs, so a coding agent loads only the context one task needs.
         └── M<n>-T<nn>-<slug>.journal.md  # append-only attempt log, created at first attempt
 ```
 
-## Session protocol (one task per session)
+## Session protocol (one task per context)
 
 1. **Pick.** `dragonhoard.py next` returns the task in progress, or the first `TODO` row of
    [STATUS.md](STATUS.md) whose dependencies are all `DONE`. Never take two tasks at once.
@@ -48,7 +48,12 @@ packs, so a coding agent loads only the context one task needs.
    | **Record** | Journal entry, `PROGRESS.md` row with real output, `STATUS.md` row, event line, digest, `dragonhoard.py check`. |
    | **Review** | `dragonhoard.py verify <task>`, then the reviewer role reads the diff against the pack. A `fix` verdict is a new attempt. |
 
-4. **Stop.** Report the next task. Commits are an owner action.
+4. **Stop.** Report the next task. Commits are an owner action; `dragonhoard.py checkpoint <task>`
+   makes one, and refuses unless verify and then review passed.
+
+The conduct skill (Claude Code) runs this protocol once per task, each in a fresh builder
+context, and goes on to the next task until a gate. It verifies, reviews and checkpoints every
+task itself.
 
 ### Standard checks
 

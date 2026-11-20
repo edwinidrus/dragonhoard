@@ -23,7 +23,8 @@ The owner decides; the coding agent does not. Add project-specific articles belo
 
 ## III. Scope
 
-7. **One task per session.** 1–3 implementation files plus one focused test file. Split a task
+7. **One task per context.** A session, or a builder started by the conduct skill, works exactly
+   one task: 1–3 implementation files plus one focused test file. Split a task
    rather than exceed this. Never build a later milestone's feature early.
 8. **The pack is the contract.** Stay inside its file list. If the pack is wrong, stop and
    report; do not silently widen scope.

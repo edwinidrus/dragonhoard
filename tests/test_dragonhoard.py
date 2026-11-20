@@ -242,6 +242,12 @@ def test_hosts(tmp: Path) -> None:
     assert "model `opus`" in run("--project", str(cc), "role", "judge")[1]
     assert 'isolation: "worktree"' in run("--project", str(cc), "role", "spiker")[1]
     assert "`dragonhoard:reviewer` with model `sonnet`" in run("--project", str(cc), "role", "reviewer")[1]
+    out = run("--project", str(cc), "role", "builder")[1]  # solo conduct: a builder subagent per task
+    assert "`dragonhoard:builder` with model `sonnet`" in out and "skills/next/SKILL.md" in out and "SendMessage" in out
+    assert "/dragonhoard:conduct" in run("--project", str(cc), "hook")[1]
+    assert "no builder role" in run("--project", str(tmp / "generic"), "role", "builder")[1]
+    assert "builder" not in dragonhoard.role_models({"host": "generic", "mode": "solo", "models": {}})
+    assert not (oc / ".opencode/agents/dragonhoard-builder.md").exists()  # never rendered as a host agent
     assert "warning" in run("--project", str(cc), "models", "--set", "judge=some-other-model")[1]
 
 
@@ -280,6 +286,7 @@ def test_hybrid(tmp: Path) -> None:
     pause = run("--project", str(tmp), "role", "judge")[1]
     assert pause.startswith("PAUSE") and "status JUDGE" in pause
     assert "delegate" in run("--project", str(tmp), "role", "builder")[1]
+    assert dragonhoard.role_models({"host": "claude-code", "mode": "hybrid", "models": {}})["builder"] is None  # no alias for OpenCode
     (tmp / "opencode.json").write_text('{"mcp": {"obsidian": {"enabled": false}}, "plugin": ["p.mjs"]}')
     assert run("--project", str(tmp), "install", "--host", "opencode", "--mcp-off", "obsidian,exa")[0] == 0
     oc = json.loads((tmp / "opencode.json").read_text())

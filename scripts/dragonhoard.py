@@ -82,10 +82,10 @@ ROLES: dict[str, dict[str, Any]] = {
         "default": "sonnet",
         "permission": {"edit": "deny", "bash": "allow", "webfetch": "deny"},
     },
-    "builder": {  # hybrid only: the OpenCode main session itself, never a subagent
+    "builder": {  # conduct only. Hybrid: the OpenCode main session. Solo on Claude Code: a subagent
         "needs": "solid coding and test running at the lowest cost; follows a skill step by step",
-        "runs": "one headless session per task, started by the orchestrator",
-        "default": None,
+        "runs": "one fresh context per task, started by the orchestrator",
+        "default": "sonnet",
         "permission": {},
     },
 }
@@ -160,14 +160,14 @@ def save_config(project: Path, config: dict[str, Any]) -> None:
 
 def role_models(config: dict[str, Any]) -> dict[str, str | None]:
     """Configured model per role; Claude Code falls back to its tier aliases, others to unset.
-    Hybrid adds the builder role and answers the judge and the reviewer in the orchestrating session."""
+    The builder exists for conduct: an OpenCode model in hybrid, a Claude Code subagent in solo. Hybrid answers the judge and the reviewer in the orchestrating session."""
     claude = config["host"] == "claude-code"
     hybrid = config.get("mode") == "hybrid"
     return {
         role: config["models"].get(role) or (EXTERNAL if hybrid and role in ORCHESTRATOR_ROLES else None)
-        or (spec["default"] if claude else None)
+        or (spec["default"] if claude and not (hybrid and role == "builder") else None)
         for role, spec in ROLES.items()
-        if role != "builder" or hybrid
+        if role != "builder" or hybrid or claude  # solo builds in the session, except under conduct
     }
 
 
@@ -678,7 +678,8 @@ def cmd_hook(project: Path | None) -> int:
     print(f"\ndragonhoard project ({host}, mode {config['mode']}). Root: {config['root']}/. CLI: python3 {cli}")
     print(f"Role models: {models}. Change with {skill_ref(host, 'models')}.")
     if config["mode"] != "hybrid":
-        print(f"Run {skill_ref(host, 'next')} to work the next task (one task per session).\n")
+        runner = " Or /dragonhoard:conduct to run task after task until the gate." if host == "claude-code" else ""
+        print(f"Run {skill_ref(host, 'next')} to work the next task (one task per session).{runner}\n")
     elif script.is_relative_to(project):  # the vendored CLI: an OpenCode builder session
         print("Mode hybrid: you are the builder. Follow the skill your prompt names, end with the HANDOFF block.\n")
     else:
@@ -936,11 +937,18 @@ def cmd_role(project: Path, args: argparse.Namespace) -> int:
         print(f"Journal: record `role {role} ran on {EXTERNAL} via orchestrator`.")
         return 0
     if role == "builder":
-        if config["mode"] != "hybrid":
-            print("Solo mode has no builder role: this session builds.")
-            return 0
-        print("The builder is the main OpenCode session itself. The orchestrator starts it with "
-              "`dragonhoard.py delegate`; never spawn it as a subagent.")
+        if config["mode"] == "hybrid":
+            print("The builder is the main OpenCode session itself. The orchestrator starts it with "
+                  "`dragonhoard.py delegate`; never spawn it as a subagent.")
+        elif host == "claude-code":
+            cli = f"python3 {Path(__file__).resolve()} --project {project}"
+            print(f"Spawn subagent_type `{name}` with model `{model}`: one fresh subagent per task, never two at once.")
+            print(f"Its prompt: `Task <id>. CLI: {cli}. Follow {PLUGIN_ROOT / 'skills' / 'next' / 'SKILL.md'} "
+                  "for exactly this task.`")
+            print("Continue the same subagent with SendMessage for answers and fixes. Only the conduct skill "
+                  "starts a builder; otherwise this session builds.")
+        else:
+            print("Solo mode on this host has no builder role: this session builds, one task per session.")
         return 0
     if host == "claude-code":
         extra = ', isolation: "worktree"' if role == "spiker" else ""
