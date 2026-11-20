@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **dragonhoard** is a Claude Code plugin: a planning harness for coding agents. It takes a user's plan
 and shapes it into milestones and self-contained task packs, so the agent loads only one task's
-context. It runs one task per session through plan → explore → verify → build → test → record. It
-keeps append-only logs as memory and learns gated lessons. Mascot: a cute dragon
+context. It runs one task per context through plan → explore → verify → build → test → record →
+review. It keeps append-only logs as memory and learns gated lessons. Mascot: a cute dragon
 (`assets/dragon.txt`); the dragon comes from the owner's origin. The name **dragonhoard**
 was chosen to avoid a trademark conflict: use exactly this name in every file, command, folder
 and identifier, and do not invent variants.
@@ -22,7 +22,7 @@ domain articles (Hermes, SQLite, Phoenix and the rest).
 python3 tests/test_dragonhoard.py       # the only test: assert-based self-check, prints "ok"
 claude plugin validate .                # manifest check (the CLAUDE.md-at-root warning is expected)
 claude --plugin-dir .                   # load the plugin for one session, e.g. from a scratch project
-python3 scripts/dragonhoard.py --help   # CLI: init | next | quick | log | digest | stats | check | hook | install | mode | delegate | verify | models | role | lesson
+python3 scripts/dragonhoard.py --help   # CLI: init | next | quick | log | digest | stats | check | lint | hook | install | mode | delegate | verify | checkpoint | models | role | lesson
 python3 -c 'import sys; sys.path.insert(0, "tests"); import test_dragonhoard as t; t.test_screen()'   # one test
 ```
 
@@ -46,7 +46,8 @@ The work is split between two halves:
   - next-task selection (STATUS.md table and gate dependencies);
   - the append-only `events.jsonl` and `lessons.jsonl`;
   - `DIGEST.md` (capped at 150 lines) and `LESSONS.md`, both generated;
-  - STATUS/PROGRESS consistency and missing-file checks;
+  - STATUS/PROGRESS consistency and missing-file checks (`check`), and stale packs (`lint`);
+  - the commit gate (`checkpoint`: only after `verify.passed`, then `review.passed`);
   - the deterministic lesson screen;
   - the learning scorecard (`stats`: first-pass rate, lessons in force, journals citing a lesson).
 
@@ -56,8 +57,10 @@ Flow:
 1. `init` runs `dragonhoard.py init`. It copies `templates/root/*` into `<root>/` and
    `templates/skeletons/**` into `<root>/templates/`, filling `{{root}}`, `{{checks}}` and
    `{{date}}`.
-2. `shape` fills the skeletons per milestone.
-3. `next` runs the loop.
+2. `spec` writes the plan with the owner when there is none. `shape` has the judge check the
+   plan, then fills the skeletons per milestone.
+3. `next` runs the loop for one task. `conduct` runs it task after task to the gate, each task in
+   a fresh builder context.
 4. `explore` fans out the roles.
 5. `learn` gates lessons.
 6. `models` has the current model suggest a model per role; the owner confirms.
@@ -66,6 +69,10 @@ Flow:
 - `scout` does read-only retrieval.
 - `spiker` builds one throwaway prototype per option, in an isolated worktree.
 - `judge` advises only: it can add warnings, but it can never clear a screen failure or approve.
+  It also checks a plan before it is shaped.
+- `reviewer` reads one finished task's diff against its pack. It is never the session that built
+  the task: on hosts without subagents the review is skipped, not done inline.
+- `builder` builds one task per fresh context, and only under `conduct`.
 
 Models are per role in `dragonhoard.json` `models`. The frontmatter `model:` in `agents/*.md` is
 only the Claude Code default (haiku/sonnet/opus tier aliases). Never hardcode concrete model
@@ -86,18 +93,22 @@ decision). Host facts and their sources are in `docs/hosts.md`; update it whenev
 changes.
 
 **Two delivery modes** (`dragonhoard.json` `mode`, asked by init; see `docs/modes.md`):
-- `solo` (the default) behaves exactly like v0.2.
+- `solo` (the default): this session builds with `next`, or `conduct` runs a builder subagent per
+  task.
 - `hybrid`: Claude Code orchestrates with `skills/conduct`, and OpenCode builds headless.
   - `delegate` runs `opencode run --format json` with first-event and idle timeouts and retries,
     writes the events to `<root>/logs/sessions/`, and prints only a stats line and the HANDOFF
     block.
   - `verify` re-runs the checks, plus scope, test-weakening and journal checks.
-  - The `builder` role exists only in hybrid, and `judge` defaults to `external`. The external
-    judge gets no agent file; `role judge` tells the builder to stop with a JUDGE handoff.
+  - The `builder` is the OpenCode main session, and `judge` and `reviewer` default to `external`
+    (`ORCHESTRATOR_ROLES`). An external role gets no agent file; `role judge` tells the builder to
+    stop with a JUDGE handoff.
   - `install --host opencode` in hybrid also merges `opencode.json`: no `ask` rules (they hang
     headless), git commits denied, skill/task allow-lists, `--mcp-off`.
   - `conduct` is orchestrator-only and is never rendered into a builder host
     (`ORCHESTRATOR_SKILLS`).
+- In `solo` on Claude Code, `conduct` uses the plugin agent `agents/builder.md` as the builder.
+  It is never rendered for another host.
 
 The `SessionStart` hook (Claude Code) is in `.claude-plugin/plugin.json` and runs
 `dragonhoard.py hook`. Other hosts get the same output through the `AGENTS.md` block
@@ -113,6 +124,11 @@ start never dirties git.
   - Task IDs are `M<n>-T<nn>[a-z]`.
 
   If you change a template, update the parser and `tests/test_dragonhoard.py` in the same change.
+- `tests/test_dragonhoard.py::test_skills` fails when a skill or agent names a CLI subcommand
+  that does not exist, or logs an event kind missing from the list in `templates/root/README.md`.
+  Add both in the same change.
+- `checkpoint` is the only code that commits. It never pushes, and it refuses files that look
+  like secrets.
 - Skeleton placeholders like `M<n>-T01` must not match the task-ID regex. Otherwise the
   templates would pollute `check`.
 - `lesson approve` re-screens the text and refuses on any violation. Secret matches are masked
@@ -128,6 +144,10 @@ start never dirties git.
   - models are configurable per role: the current model suggests, the owner confirms;
   - on hosts without per-agent models, the judge pauses for a model switch rather than running
     on a weaker model;
+  - one task per context, not per session: `conduct` may run tasks back to back, each in a fresh
+    builder context, each verified, reviewed and checkpointed (decided 2026-11-20);
+  - every task is reviewed by a role that did not build it;
+  - running `conduct` is the owner's consent to checkpoint commits; pushing stays with the owner;
   - init always asks the mode: full Claude Code, or Claude Code + OpenCode. In hybrid the
     orchestrating Claude Code session is the judge, and it verifies every builder DONE
     independently.

@@ -60,7 +60,7 @@ treat the result like any other HANDOFF.
 ## 2. Act on the HANDOFF status
 
 - **JUDGE**: the builder needs a judgement or an explored choice.
-  - A request to compare evidence or review lessons: read the evidence paths it names, and only
+  - A request to compare evidence, review lessons or check a plan: read the evidence paths it names, and only
     those. In hybrid you are the judge: apply `${CLAUDE_PLUGIN_ROOT}/agents/judge.md`. In solo,
     run the judge as `dragonhoard.py role judge` says.
   - An open choice with no evidence yet: run `/dragonhoard:explore` yourself; the owner picks.

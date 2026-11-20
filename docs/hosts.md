@@ -13,6 +13,13 @@ that feature.
 | Cline | `.cline/skills/` (experimental toggle) | not confirmed: roles inline, judge pauses | `.clinerules/dragonhoard.md` | inline |
 | Generic (Cursor, Gemini CLI, Copilot, Windsurf, …) | `.agents/skills/` | none assumed: roles inline, judge pauses | `AGENTS.md` block | inline |
 
+Roles (`ROLES` in the script): `scout`, `spiker`, `judge` and `reviewer` are rendered as host
+agents where the host supports them. On Cline and generic hosts the reviewer is skipped, because
+a session never reviews its own work; the gate review covers it. The `builder` role is never
+rendered as a host agent: in hybrid it is the OpenCode main session, and in solo it is the
+Claude Code plugin agent `dragonhoard:builder`, used only by the conduct skill. The reviewer and
+solo builder paths were added 2026-11-20 and have file-level tests only; no live check yet.
+
 ## Evidence (checked 2026-10-19)
 
 **OpenCode** (docs: opencode.ai/docs/agents, opencode.ai/docs/skills; local `opencode 1.18.34`)

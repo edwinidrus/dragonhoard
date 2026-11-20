@@ -6,10 +6,12 @@ can change it later with `dragonhoard.py mode <solo|hybrid> --why "..."`. The ch
 
 | | **Solo: full Claude Code** | **Hybrid: Claude Code + OpenCode** |
 |---|---|---|
-| Who builds each task | this Claude Code session (`/dragonhoard:next`) | a headless OpenCode session on the `builder` model, started by `dragonhoard.py delegate` |
+| Who builds each task | this Claude Code session (`/dragonhoard:next`), or a `builder` subagent per task under `/dragonhoard:conduct` | a headless OpenCode session on the `builder` model, started by `dragonhoard.py delegate` |
 | Scout / spiker | Claude subagents (haiku / sonnet) | OpenCode subagents (`dragonhoard-scout`, `dragonhoard-spiker`), usually on the builder's model |
 | Judge | the opus judge subagent | **external**: the Claude Code session itself |
-| Verification | the builder's own checks, plus the gates | the same, plus `dragonhoard.py verify` after every task: checks re-run, scope, weakened tests, journal |
+| Reviewer | a sonnet reviewer subagent, after every task | a reviewer subagent of the Claude Code session, after every task |
+| Verification | `dragonhoard.py verify` after every task: checks re-run, scope, weakened tests, journal | the same, run by the orchestrator, never by the builder |
+| Commits | yours, or `dragonhoard.py checkpoint <task>` once verify and review passed | `conduct` checkpoints each task; the builder cannot commit |
 | Claude tokens | every step | judgement, verification, gates and escalations only |
 | Best when | quality comes first and the budget is fine | you want to save Claude tokens and still get a frontier-level reviewer |
 
@@ -26,8 +28,9 @@ Claude Code (orchestrator, /dragonhoard:conduct)            OpenCode (builder, h
   <- stats line + HANDOFF block (status, files, checks, questions, judge request, risks)
   JUDGE?    judge here, reply with delegate --session <id>
   QUESTION? ask the owner, reply with delegate --session <id>
-  DONE?     dragonhoard.py verify M2-T03 -> PASS: owner checkpoint -> next task
-                                          -> FAIL: one retry with the FAIL lines
+  DONE?     dragonhoard.py lint, verify M2-T03 -> PASS: reviewer subagent reads the diff
+                                          -> approve: dragonhoard.py checkpoint -> next task
+                                          -> FAIL or fix: one retry with those lines
   2nd FAIL? log task.escalated and work the task here with /dragonhoard:next (solo for one task)
   gate:     run GATE.md, review the milestone diff, the owner plays it
 ```
@@ -43,6 +46,19 @@ Why quality holds:
   with the pack, and catches deleted assertions and new `.skip`/`.only` marks.
 - The frontier model still judges every option pick and every lesson. Repeated failures move to
   the frontier model instead of looping.
+
+## Running without stopping (`/dragonhoard:conduct`)
+
+`conduct` works in both modes. It gives each task to a fresh builder context, then verifies,
+reviews and checkpoints the result itself, and takes the next task without asking. In solo the
+builder is the `dragonhoard:builder` subagent (Claude Code only); in hybrid it is the OpenCode
+session. It stops only for a gate, an owner decision, a task that failed again after escalation,
+a rate limit or spending cap, or a context past about half.
+
+`dragonhoard.py checkpoint <task>` is the only way `conduct` commits. It refuses unless the
+task's last `verify` passed and a `review.passed` event follows it, and it refuses to commit
+files that look like secrets (`.env`, `*.pem`, `*.key`). It never pushes. Running `conduct` is
+the owner's consent to these checkpoint commits on the current branch.
 
 ## Setup
 
@@ -77,6 +93,9 @@ limit as a wait, not a failure:
 - it steps a `#variant` effort down one level per limit, but never below `effort_floor` (default
   `high`);
 - after `--quota-patience` (6 h) it exits with code 3, `RATE-LIMITED`.
+
+A spending cap is different: an HTTP 402 or an "insufficient credits" error does not lift by
+waiting, so `delegate` stops at once with code 4, `OUT-OF-CREDIT`.
 
 The free models on OpenCode Zen may use prompts to improve the model. Keep secrets out of the
 repository, and turn off MCP servers that reach personal data.

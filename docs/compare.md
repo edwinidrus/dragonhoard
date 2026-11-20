@@ -1,16 +1,16 @@
 # dragonhoard compared with other planning tools
 
-As of 2026-11-03. The other tools change quickly. Star counts are approximate, taken from public
+As of 2026-11-20 (dragonhoard v0.4). The other tools change quickly. Star counts are approximate, taken from public
 pages and articles, and the descriptions summarise the tools' own docs. Corrections are welcome.
 
 ## At a glance
 
 | | **dragonhoard** | **Superpowers** | **Spec Kit** | **BMAD-METHOD** | **GSD** | **Compound Engineering** | **Ralph loop** |
 |---|---|---|---|---|---|---|---|
-| Core idea | Plan → milestones → task packs; one task per session through plan → explore → verify → build → test → record | Discipline skills (brainstorm, plan, TDD, debug, verify) loaded on demand | Spec-driven: constitution → spec → plan → tasks, committed to git | Agile persona team (analyst, PM, architect, dev, QA) | Meta-prompting and context engineering, spec-driven | Plan → work → review → compound | The same prompt rerun until no work is left |
+| Core idea | Plan → milestones → task packs; one task per context through plan → explore → verify → build → test → record → review | Discipline skills (brainstorm, plan, TDD, debug, verify) loaded on demand | Spec-driven: constitution → spec → plan → tasks, committed to git | Agile persona team (analyst, PM, architect, dev, QA) | Meta-prompting and context engineering, spec-driven | Plan → work → review → compound | The same prompt rerun until no work is left |
 | Context per task | One self-contained pack | Plan doc in the conversation | Grows with the spec artifacts | Many persona docs | Fresh subagent context per plan | CLAUDE.md and docs | The whole repo on every loop |
 | Who owns the state | A deterministic stdlib CLI (STATUS, `events.jsonl`, digest) | The model, through prompt wording | Templates and a CLI | The model, through docs | The model, through docs | The model, through docs | git commits |
-| Checking "done" | `verify` re-runs the checks independently, diffs scope against the pack, and catches weakened tests | A verification skill (prompt-enforced) | `/analyze` and checklists | A QA persona | A verify step | Review agents | Tests inside the loop |
+| Checking "done" | `verify` re-runs the checks independently, diffs scope against the pack, and catches weakened tests; a reviewer then reads the diff against the pack; `checkpoint` commits only after both | A verification skill (prompt-enforced) | `/analyze` and checklists | A QA persona | A verify step | Review agents | Tests inside the loop |
 | Memory across sessions | Append-only logs and a 150-line digest, printed at session start | Plan files | Spec files | Docs | State files | Docs | git history |
 | Learns over time | **Yes, gated**: deterministic screen, frontier judge, human approval, provenance, revoke | No lesson loop in the core skills | No | No | No | Yes, **ungated**: the agent writes its learnings into docs | No |
 | Cheap builder, frontier judge | Yes (hybrid mode: OpenCode builds, Claude Code judges) | No | No | No | No | No | No |
@@ -33,14 +33,18 @@ pages and articles, and the descriptions summarise the tools' own docs. Correcti
 
 ## Where dragonhoard is weaker
 
-- **Ceremony.** One task per session, plus your sign-off on lessons and gates, is slow for a quick
-  fix. For a one-line change, use a lighter tool or none.
+- **Ceremony.** Packs, journals and your sign-off on lessons and gates are slow for a quick fix.
+  `/dragonhoard:quick` is the lighter path; for a one-line change, use nothing.
+- **v0.4 is untrialled.** The 96-task trial audited v0.2. Per-task review, the solo run mode and
+  `spec` are new and have no reliability trial yet.
 - **Unproven effect size.** `stats` shows that lessons exist and are cited. It does not yet show
   that they raise the first-pass rate. The A/B trial that would measure it is designed in
   [evals/lessons-ab](../evals/lessons-ab/scorecard.md) but has not run.
-- **Shaping quality.** Packs can carry stale interfaces. The builder stops with evidence instead of
-  guessing, but every stop costs a round-trip with you.
+- **Shaping quality.** Packs can carry stale interfaces. `lint` now catches a missing file or a
+  misordered task before a session is spent, but not a signature that changed.
 - **Small community.** It has fewer skills and fewer users than Superpowers or Spec Kit.
+
+What v0.3 lacked and what v0.4 changed because of it: [v0.4-gaps.md](v0.4-gaps.md).
 
 ## Using them together
 

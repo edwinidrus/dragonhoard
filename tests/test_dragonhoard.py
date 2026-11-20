@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -425,6 +426,28 @@ def test_hybrid(tmp: Path) -> None:
     assert dragonhoard.parse_handoff("HANDOFF\nstatus: maybe\n") is None
 
 
+def test_skills() -> None:
+    """The skills and the CLI are written apart; this keeps them from drifting apart."""
+    plugin = Path(dragonhoard.__file__).resolve().parents[1]
+    source = Path(dragonhoard.__file__).read_text()
+    documented = (plugin / "templates/root/README.md").read_text().split("## Event kinds")[1].split("\n## ")[0]
+    prose = ""
+    for skill in sorted(plugin.glob("skills/*/SKILL.md")):
+        front, body = dragonhoard.split_frontmatter(skill.read_text())
+        assert f"name: {skill.parent.name}\n" in front + "\n", skill
+        assert dragonhoard.frontmatter_description(front), skill
+        prose += body
+    prose += "".join(agent.read_text() for agent in plugin.glob("agents/*.md"))
+    for command in set(re.findall(r"dragonhoard\.py ([a-z]+)", prose)):
+        assert f'add_parser("{command}")' in source, f"a skill names `dragonhoard.py {command}`, which does not exist"
+    logged = set(re.findall(r"dragonhoard\.py log \S+ ([a-z]+\.[a-z_]+)", prose))
+    emitted = set(re.findall(r'"kind": "([a-z._]+)"', source)) | {"verify.passed", "lesson.approved"}
+    for kind in logged | emitted:
+        assert f"`{kind}`" in documented, f"event kind {kind} is not in the README template's list"
+    for role in dragonhoard.ROLES:
+        assert (plugin / "agents" / f"{role}.md").is_file(), role
+
+
 def test_stats() -> None:
     ev = lambda ts, task, kind: {"ts": ts, "task": task, "kind": kind, "summary": "", "ref": ""}
     events = [ev("1", "M1-T01", "task.started"), ev("2", "M1-T01", "task.done"),
@@ -447,6 +470,7 @@ if __name__ == "__main__":
     test_tables_and_next()
     test_screen()
     test_stats()
+    test_skills()
     with tempfile.TemporaryDirectory() as folder:
         test_hosts(Path(folder))
     with tempfile.TemporaryDirectory() as folder:

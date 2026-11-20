@@ -31,6 +31,8 @@ packs, so a coding agent loads only the context one task needs.
 
 1. **Pick.** `dragonhoard.py next` returns the task in progress, or the first `TODO` row of
    [STATUS.md](STATUS.md) whose dependencies are all `DONE`. Never take two tasks at once.
+   `dragonhoard.py lint <task>` must pass first: a pack that consumes a missing file or a later
+   task is stale, and the task is `BLOCKED` until the pack is amended.
 2. **Load exactly this context, nothing more:**
    - [CONSTITUTION.md](CONSTITUTION.md), [DIGEST.md](DIGEST.md) and [LESSONS.md](LESSONS.md)
    - the milestone `CONSTITUTION.md`
@@ -74,6 +76,12 @@ Stop and report `BLOCKED` when any of these happens:
 - the task needs an unapproved architectural change;
 - two bounded attempts at the same issue have failed. The journal is the evidence for this.
 
+A second attempt needs a root cause first: reproduce the failure, read the whole error, compare
+with the last green state, then test one hypothesis with one change.
+
+An owner request that breaks an article or a plan rule is a question, not an order
+(constitution article 18).
+
 ## Journal entry format
 
 Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier blocks.
@@ -91,8 +99,14 @@ Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier bl
 
 ## Event kinds (`logs/events.jsonl`)
 
-`task.started` · `attempt` · `option.chosen` · `task.blocked` · `task.done` · `gate.run` ·
-`lesson.approved` · `lesson.rejected` · `lesson.revoked` · `models.changed`.
+- Setup: `init` · `models.changed` · `mode.changed`.
+- Planning: `spec.approved` · `plan.checked` · `shape.approved` · `shape.milestone`.
+- Tasks: `task.started` · `attempt` · `option.chosen` · `owner.override` · `task.blocked` ·
+  `task.done` · `task.escalated` · `gate.run`.
+- Checking: `verify.passed` · `verify.failed` · `review.passed` · `review.failed`.
+- Lessons: `lesson.approved` · `lesson.rejected` · `lesson.revoked`.
+- Hybrid builder: `delegate.started` · `delegate.done` · `delegate.rate_limited` ·
+  `delegate.out_of_credit`.
 
 The journal explains *why*; the event log lets the next session see *what happened* across the
 whole journey without reading every journal. `DIGEST.md` is the compact view of both.
