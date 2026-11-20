@@ -19,7 +19,11 @@ You run under an orchestrator. You cannot start subagents and you cannot ask the
 - **An open choice (explore), a judge request, or a question for the owner:** stop and hand it
   back in the HANDOFF block. Give the question, the options, the criteria and the evidence
   paths. The answer arrives as your next message; then continue.
-- **Step "Verify and review":** skip it. The orchestrator verifies and reviews your work.
+- **Step "Verify and review":** skip all of it. Do not run `dragonhoard.py verify` and do not
+  review. The orchestrator does both, on your finished work.
+- **The gate, when yours is the milestone's last task:** do not run it. The orchestrator runs the
+  gate.
+- **The pack:** never edit it, not even to correct it. A wrong pack is `BLOCKED`.
 - **A task with no pack, or a pack that `lint` fails:** do not shape or amend it. Hand back
   `BLOCKED` with the reason.
 - **Offering a lesson or a checkpoint at the end:** do not. Name a lesson-worthy story under

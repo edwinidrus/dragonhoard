@@ -38,7 +38,8 @@ Restate the goal, scope, files and acceptance in five lines or fewer.
 
 If the pack is wrong or stale (it names an interface that does not exist, or contradicts an
 `option.chosen` event or a lesson): record BLOCKED (section 7) and stop. Never quietly rewrite a
-pack's scope.
+pack's scope. A pack changes only when the owner approves it, and the change is recorded with
+`dragonhoard.py log <task> pack.amended "<what changed>: <the owner's reason>"`.
 
 If the owner asks for something that breaks a constitution article or a plan rule, do not do
 it: stop, name the rule and ask (a headless builder ends with HANDOFF status QUESTION). After an
@@ -110,7 +111,8 @@ it. An attempt with Outcome FAIL and no `Root cause` line fails `dragonhoard.py 
      fix exactly those as a new attempt, then verify and review again.
    - Verdict `approve`: run `dragonhoard.py log <task> review.passed "<n> minor: <one line each, or none>"`.
 
-6. If this was the milestone's last task, run the `GATE.md` commands. Append the real output to
+6. If this was the milestone's last task, run the `GATE.md` commands. (A builder working for an
+   orchestrator skips this item: the orchestrator runs the gate.) Append the real output to
    its results log, set the gate row in `STATUS.md`, and run
    `dragonhoard.py log - gate.run "G<n> PASSED|PARTIAL: <why>"`.
 

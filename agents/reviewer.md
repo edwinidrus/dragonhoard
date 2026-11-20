@@ -13,7 +13,8 @@ You review one dragonhoard task in a fresh context. You read; you never write, e
 ## Input
 
 The path of the task pack. Read the pack, then run `git diff HEAD` and `git status --short` to
-see the task's work. Read the changed files where the diff alone is not enough.
+see the task's work. New files are untracked (`??`) and are not in the diff: read each of them in
+full. Read the other changed files where the diff alone is not enough.
 
 ## Rules
 
@@ -22,6 +23,10 @@ see the task's work. Read the changed files where the diff alone is not enough.
 - Every finding names `file:line` and what is wrong. A finding you cannot point at is dropped.
 - Do not report style, formatting or naming unless it changes meaning.
 - Do not re-run the standard checks: `dragonhoard.py verify` already did.
+- **If the pack itself is in the diff,** look in the workspace's `logs/events.jsonl` for a
+  `pack.amended` event for this task. With one, the owner approved the change: review against the
+  pack as it now stands and report nothing about it. Without one, report it as `important`: the
+  contract changed and nothing says who changed it or why.
 
 ## Check, in this order
 

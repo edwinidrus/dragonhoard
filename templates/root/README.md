@@ -101,8 +101,8 @@ Append one block per attempt to `tasks/<task>.journal.md`. Never edit earlier bl
 
 - Setup: `init` · `models.changed` · `mode.changed`.
 - Planning: `spec.approved` · `plan.checked` · `shape.approved` · `shape.milestone`.
-- Tasks: `task.started` · `attempt` · `option.chosen` · `owner.override` · `task.blocked` ·
-  `task.done` · `task.escalated` · `gate.run`.
+- Tasks: `task.started` · `attempt` · `option.chosen` · `owner.override` · `pack.amended` ·
+  `task.blocked` · `task.done` · `task.escalated` · `gate.run`.
 - Checking: `verify.passed` · `verify.failed` · `review.passed` · `review.failed`.
 - Lessons: `lesson.approved` · `lesson.rejected` · `lesson.revoked`.
 - Hybrid builder: `delegate.started` · `delegate.done` · `delegate.rate_limited` ·

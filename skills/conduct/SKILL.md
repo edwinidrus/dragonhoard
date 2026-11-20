@@ -56,7 +56,9 @@ Then send the builder the task, exactly one per builder context. In hybrid:
 `dragonhoard.py delegate "Use the dragonhoard-next skill."`, and note the `session` id it prints.
 
 When `lint` fails, show the owner the `stale` lines and ask whether to amend the pack; send the
-amendment, never the build. When `next` reports a task with no pack, first send
+amendment, never the build. Record every amendment the owner approves, whoever writes it:
+`dragonhoard.py log <task> pack.amended "<what changed>: <the owner's reason>"`. The reviewer
+treats a changed pack with no such event as a finding. When `next` reports a task with no pack, first send
 `"Use the dragonhoard-shape skill for M<n>."` (solo: run `/dragonhoard:shape M<n>` yourself) and
 treat the result like any other HANDOFF.
 
@@ -132,8 +134,8 @@ plan. Offer `/dragonhoard:models` to pick a stronger builder.
 ## 5. Gates
 
 When a milestone's last task is done, or the builder reports PARTIAL for a gate:
-1. Run the commands in the milestone's `GATE.md` yourself, and record their results. The builder
-   may have run them with the last task; as with verify, run them again instead of trusting the
+1. Run the commands in the milestone's `GATE.md` yourself, and record their results. A builder
+   does not run the gate; if a hybrid builder ran it anyway, run it again instead of trusting the
    record.
 2. Review the milestone as a whole before the owner tries it: one reviewer subagent on
    `git diff <base>..HEAD`, looking for what per-task reviews cannot see (pieces that do not fit
