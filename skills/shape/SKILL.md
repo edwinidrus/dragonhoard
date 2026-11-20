@@ -77,6 +77,7 @@ value.
 
    ```bash
    dragonhoard.py check     # must PASS: STATUS and PROGRESS agree
+   dragonhoard.py lint      # must PASS: no pack consumes a missing file or a later task
    dragonhoard.py next      # must name M0-T01
    dragonhoard.py digest
    ```
@@ -93,4 +94,5 @@ Run this when `dragonhoard.py next` reaches a task with no pack.
 2. If the tasks no longer fit (scope, order or contracts changed), propose the change and
    ask the owner to confirm it before writing anything.
 3. Write the packs as in A.4. Fill the `[pack]` links in `STATUS.md` and the milestone's
-   `PLAN.md`. Log `dragonhoard.py log - shape.milestone "M<n>: <k> packs"`, then run `check`.
+   `PLAN.md`. Log `dragonhoard.py log - shape.milestone "M<n>: <k> packs"`, then run `check` and `lint`; both
+   must PASS. Fix a pack that `lint` calls stale before handing off.

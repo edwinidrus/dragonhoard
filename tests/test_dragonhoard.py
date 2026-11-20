@@ -74,6 +74,32 @@ def test_mismatch_and_missing(tmp: Path) -> None:
     assert dragonhoard.missing_files(rows, tmp) == ["M1-T01: src/b.py"]
 
 
+def test_lint(tmp: Path) -> None:
+    assert run("--project", str(tmp), "init", "--root", "impl")[0] == 0
+    (tmp / "impl/STATUS.md").write_text(STATUS)
+    (tmp / "src").mkdir()
+    (tmp / "src/a.py").write_text("one\ntwo\n")
+    pack = tmp / "impl/M1-a/tasks/M1-T02-b.md"
+    pack.parent.mkdir(parents=True)
+    project = ["--project", str(tmp)]
+    pack.write_text("- **Files:** `src/b.py` + `tests/test_b.py`\n- **Consumes:** `load()` at `src/a.py:2`;\n"
+                    "  `save()` from M1-T03 at `src/later.py`\n- **Produces:** `b()`\n")
+    code, out = run(*project, "lint")
+    assert code == 1 and "M1-T02: consumes M1-T03: it comes later" in out and "1 packs | 1 problems" in out, out
+    pack.write_text("- **Files:** `src/b.py`\n- **Consumes:** `src/a.py:9`, `src/gone.py::f`\n"
+                    "  - M9-T01 `src/x.py`\n  - M1-T01 `src/done.py`\n")
+    out = run(*project, "lint", "M1-T02")[1]
+    for problem in ("src/a.py:9: the file is shorter", "src/gone.py: missing", "M9-T01: not in STATUS.md",
+                    "src/done.py: missing"):  # M1-T01 is DONE, so what it produced must exist
+        assert problem in out, (problem, out)
+    assert "src/x.py" not in out  # planned by a task that is not done: not checked yet
+    pack.write_text("- **Files:** `a/1.py`, `a/2.py`, `a/3.py`, `a/4.py` + `tests/test_a.py`\n- **Consumes:** none\n")
+    assert "4 implementation files" in run(*project, "lint")[1]
+    pack.write_text("- **Files:** `src/b.py` + `tests/test_b.py`\n- **Consumes:** `src/a.py:2`\n")
+    assert run(*project, "lint") == (0, "lint: PASS | 1 packs | 0 problems\n")
+    assert run(*project, "lint", "M1-T03")[0] == 1 and run(*project, "lint", "M7-T01")[0] == 1  # no pack; unknown
+
+
 def test_end_to_end(tmp: Path) -> None:
     code, out = run("--project", str(tmp), "init", "--root", "implementation", "--check", "pytest -q")
     assert code == 0, out
@@ -380,6 +406,8 @@ if __name__ == "__main__":
         test_hybrid(Path(folder) / "repo")
     with tempfile.TemporaryDirectory() as folder:
         test_mismatch_and_missing(Path(folder))
+    with tempfile.TemporaryDirectory() as folder:
+        test_lint(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
         test_end_to_end(Path(folder))
     print("ok")

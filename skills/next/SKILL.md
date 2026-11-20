@@ -22,6 +22,8 @@ dragonhoard.py next
 
 - `none ready`: report the blockers from `<root>/DIGEST.md` and stop.
 - The task has no pack: run `/dragonhoard:shape M<n>` first.
+- Run `dragonhoard.py lint <task>`. On FAIL the pack is stale: record BLOCKED (section 7) with
+  the `stale` lines as the reason, and stop. Do not load the pack's context first.
 - Otherwise set the task's row to `IN_PROGRESS` in both `STATUS.md` and the milestone's
   `PROGRESS.md`. Then run `dragonhoard.py log <task> task.started "<title>"`.
 

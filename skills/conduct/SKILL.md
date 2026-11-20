@@ -26,10 +26,12 @@ spend your tokens on judgement and checks, not on reading. Hard rules:
 
 ```bash
 dragonhoard.py next                       # which task, or why none is ready
+dragonhoard.py lint <task>                # FAIL: the pack is stale; do not delegate it
 dragonhoard.py delegate "Use the dragonhoard-next skill."
 ```
 
-When `next` reports a task with no pack, first delegate `"Use the dragonhoard-shape skill for M<n>."` and treat
+When `lint` fails, show the owner the `stale` lines and ask whether to amend the pack; delegate
+the amendment, never the build. When `next` reports a task with no pack, first delegate `"Use the dragonhoard-shape skill for M<n>."` and treat
 the result like any other HANDOFF. Delegate exactly one task per builder session. Note the
 `session` id that `delegate` prints.
 

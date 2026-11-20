@@ -10,6 +10,7 @@ and the lesson screen and ledger.
     dragonhoard.py log M1-T01 option.chosen "picked sqlite over json" --ref journal#2
     dragonhoard.py digest
     dragonhoard.py check
+    dragonhoard.py lint [M1-T02]              # stale packs, before a session is spent on them
     dragonhoard.py lesson screen < lesson.txt
     dragonhoard.py lesson approve --text "..." --provenance "M1-T01#3" --judge "..." --by owner
     dragonhoard.py lesson revoke L01 --reason "..." --by owner
@@ -985,11 +986,64 @@ def changed_files(project: Path, base: str) -> set[str]:
     return set(committed) | set(pending)
 
 
+def pack_field(pack: str, name: str) -> str:
+    """Text of the pack's `- **<name>:**` bullet (it may span several lines)."""
+    match = re.search(rf"^- \*\*{name}:\*\*(.*?)(?=^- \*\*|^#|\Z)", pack, re.M | re.S)
+    return match.group(1) if match else ""
+
+
 def pack_files(pack: str) -> set[str]:
-    """Backticked paths in the pack's `- **Files:**` bullet (it may span several lines)."""
-    match = re.search(r"^- \*\*Files:\*\*(.*?)(?=^- \*\*|^#|\Z)", pack, re.M | re.S)
-    tokens = BACKTICKED.findall(match.group(1)) if match else []
+    """Backticked paths in the pack's `- **Files:**` bullet."""
+    tokens = BACKTICKED.findall(pack_field(pack, "Files"))
     return {t.split("::")[0] for t in tokens if "." in t or "/" in t if not re.search(r"[<>{}*$ ]", t)}
+
+
+def lint_pack(task: str, pack: str, rows: list[dict[str, str]], project: Path) -> list[str]:
+    """Stale or oversized pack, found before a session is spent on it: consumed paths that do not
+    exist, references to tasks that are missing or come later, more than 3 implementation files."""
+    order = [row["task"] for row in rows]
+    status = {row["task"]: row["status"] for row in rows}
+    problems = []
+    for line in pack_field(pack, "Consumes").splitlines():
+        producers = [ref for ref in re.findall(TASK_ID, line) if ref != task]
+        for ref in producers:
+            if ref not in status:
+                problems.append(f"consumes {ref}: not in STATUS.md")
+            elif task in order and order.index(ref) > order.index(task):
+                problems.append(f"consumes {ref}: it comes later in STATUS.md")
+        if any(status.get(ref) not in DONE_STATUSES for ref in producers):
+            continue  # planned code: it need not exist until its producer is done
+        for token in BACKTICKED.findall(line):
+            path = _path_token(token)
+            if path is None:
+                continue
+            file, at = project / path, re.search(r":(\d+)", token.split("::")[0])
+            if not file.exists():
+                problems.append(f"consumes {path}: missing")
+            elif at and file.is_file() and int(at.group(1)) > len(file.read_text(errors="replace").splitlines()):
+                problems.append(f"consumes {path}:{at.group(1)}: the file is shorter")
+    built = sorted(f for f in pack_files(pack) if not TEST_FILE.search(f))
+    if len(built) > 3:
+        problems.append(f"files: {len(built)} implementation files, the limit is 3; split the task")
+    return problems
+
+
+def cmd_lint(workspace: Workspace, args: argparse.Namespace) -> int:
+    """Lint one task's pack, or every pack that is still to be built."""
+    rows = status_rows(workspace.status_text())
+    chosen = [r for r in rows if r["task"] == args.task] if args.task else [
+        r for r in rows if r["status"] in ("TODO", "IN_PROGRESS") and r["pack"]]
+    problems = [] if chosen or not args.task else [f"{args.task}: not in STATUS.md"]
+    for row in chosen:
+        path = workspace.root / row["pack"] if row["pack"] else None
+        if path is None or not path.is_file():
+            problems.append(f"{row['task']}: no pack file")
+            continue
+        problems += [f"{row['task']}: {p}" for p in lint_pack(row["task"], path.read_text(), rows, workspace.project)]
+    for problem in problems:
+        print(f"stale {problem}")
+    print(f"lint: {'FAIL' if problems else 'PASS'} | {len(chosen)} packs | {len(problems)} problems")
+    return 1 if problems else 0
 
 
 def weakened_tests(project: Path, base: str) -> list[str]:
@@ -1215,6 +1269,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("stats").add_argument("--json", action="store_true")
     sub.add_parser("quick").add_argument("title")
     sub.add_parser("check")
+    sub.add_parser("lint").add_argument("task", nargs="?")
     sub.add_parser("hook")
     install = sub.add_parser("install")
     install.add_argument("--host", required=True, choices=sorted(HOSTS))
@@ -1277,7 +1332,7 @@ def main(argv: list[str] | None = None) -> int:
         print(workspace.write_digest())
         return 0
     handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson,
-                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats, "quick": cmd_quick}
+                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats, "quick": cmd_quick, "lint": cmd_lint}
     return handlers[args.command](workspace, args)
 
 
