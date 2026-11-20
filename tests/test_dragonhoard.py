@@ -182,6 +182,9 @@ def test_hosts(tmp: Path) -> None:
     assert "CLAUDE_PLUGIN_ROOT" not in skill and "dragonhoard:" not in skill
     judge = (oc / ".opencode/agents/dragonhoard-judge.md").read_text()
     assert "mode: subagent" in judge and "edit: deny" in judge and "model:" not in judge  # unset
+    reviewer = (oc / ".opencode/agents/dragonhoard-reviewer.md").read_text()
+    assert "edit: deny" in reviewer and "bash: allow" in reviewer and "Verdict: approve | fix" in reviewer
+    assert "path of the task pack" in run("--project", str(oc), "role", "reviewer")[1]
     assert (oc / ".dragonhoard/scripts/dragonhoard.py").is_file()
     assert run("--project", str(oc), "install", "--host", "opencode")[0] == 0  # idempotent
     agents_md = (oc / "AGENTS.md").read_text()
@@ -230,6 +233,7 @@ def test_hosts(tmp: Path) -> None:
         assert "no role subagents" in (folder / rules).read_text().lower()
         assert run("--project", str(folder), "role", "judge")[1].startswith("PAUSE")
         assert "git worktree add" in run("--project", str(folder), "role", "spiker")[1]
+        assert "SKIP the review" in run("--project", str(folder), "role", "reviewer")[1]
 
     # claude-code keeps its tier aliases and warns on anything else
     cc = tmp / "cc"
@@ -237,6 +241,7 @@ def test_hosts(tmp: Path) -> None:
     run("--project", str(cc), "init", "--root", "implementation")
     assert "model `opus`" in run("--project", str(cc), "role", "judge")[1]
     assert 'isolation: "worktree"' in run("--project", str(cc), "role", "spiker")[1]
+    assert "`dragonhoard:reviewer` with model `sonnet`" in run("--project", str(cc), "role", "reviewer")[1]
     assert "warning" in run("--project", str(cc), "models", "--set", "judge=some-other-model")[1]
 
 
@@ -284,6 +289,8 @@ def test_hybrid(tmp: Path) -> None:
     assert set(oc["mcp"]) == {"obsidian", "exa"} and oc["plugin"] == ["p.mjs"]  # partial entry repaired, other keys kept
     assert '"ask"' not in json.dumps(oc["permission"])  # a headless builder would hang on "ask"
     assert not (tmp / ".opencode/agents/dragonhoard-judge.md").exists()  # external: no agent file
+    assert not (tmp / ".opencode/agents/dragonhoard-reviewer.md").exists()  # the orchestrator reviews
+    assert run("--project", str(tmp), "role", "reviewer")[1].startswith("SKIP verify and review")
     assert (tmp / ".opencode/agents/dragonhoard-scout.md").is_file()
     assert not (tmp / ".opencode/skills/dragonhoard-conduct").exists()  # orchestrator-only skill
     assert "Mode hybrid: you are the builder" in (tmp / "AGENTS.md").read_text()
@@ -385,6 +392,26 @@ def test_hybrid(tmp: Path) -> None:
     assert code == 4 and "OUT-OF-CREDIT: 402 Payment Required" in out, out
     assert len((stub_dir / "calls.txt").read_text().splitlines()) == 1
     assert "delegate.out_of_credit" in (tmp / "impl/logs/events.jsonl").read_text()
+    # checkpoint: no commit until verify, and then review, have passed
+    project = ["--project", str(tmp)]
+    sh("git", "config", "user.name", "t")
+    sh("git", "config", "user.email", "t@t")
+    head = lambda: sh("git", "log", "-1", "--format=%s").stdout.decode().strip()  # noqa: E731
+    assert "the last verify did not pass" in run(*project, "checkpoint", "M1-T01")[1]  # src/a.js is gone
+    (tmp / "src/a.js").write_text("export const a = () => 1;\n")
+    assert run(*project, "verify", "M1-T01")[0] == 0
+    assert "no review.passed" in run(*project, "checkpoint", "M1-T01")[1]
+    run(*project, "log", "M1-T01", "review.passed", "0 findings")
+    run(*project, "log", "M1-T01", "review.failed", "important | src/a.js:1 | wrong")
+    assert "no review.passed" in run(*project, "checkpoint", "M1-T01")[1]  # the latest review decides
+    run(*project, "log", "M1-T01", "review.passed", "fixed")
+    (tmp / ".env").write_text("KEY=1")
+    assert "['.env']" in run(*project, "checkpoint", "M1-T01")[1] and head() == "base"
+    (tmp / ".env").unlink()
+    code, out = run(*project, "checkpoint", "M1-T01")
+    assert code == 0 and head() == "checkpoint M1-T01: t", out
+    assert "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
+    assert "not in STATUS.md" in run(*project, "checkpoint", "M9-T09")[1]
     assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
     assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"
@@ -395,7 +422,8 @@ def test_stats() -> None:
     ev = lambda ts, task, kind: {"ts": ts, "task": task, "kind": kind, "summary": "", "ref": ""}
     events = [ev("1", "M1-T01", "task.started"), ev("2", "M1-T01", "task.done"),
               ev("3", "M1-T02", "verify.failed"), ev("4", "M1-T02", "task.done"),
-              ev("6", "M2-T01", "task.started"), ev("7", "M2-T01", "task.done"), ev("8", "-", "init")]
+              ev("6", "M2-T01", "task.started"), ev("7", "M2-T01", "review.failed"), ev("7", "M2-T01", "review.passed"),
+              ev("7", "M2-T01", "task.done"), ev("8", "-", "init")]
     ledger = [{"ts": "5", "id": "L01", "status": "approved"}, {"ts": "5", "id": "L02", "status": "approved"},
               {"ts": "5", "id": "L03", "status": "rejected"}, {"ts": "5", "id": "L02", "status": "revoked"}]
     journals = {"M1-T01-a.journal.md": "no lesson", "M2-T01-b.journal.md": "followed L01",
@@ -404,6 +432,7 @@ def test_stats() -> None:
     assert (m1["milestone"], m1["done"], m1["first_pass"], m1["first_pass_pct"]) == ("M1", 2, 1, 50), m1
     assert m1["lessons_in_force"] == 0 and m1["journals"] == 1 and m1["journals_citing"] == 0
     assert m2["lessons_in_force"] == 1 and m2["journals"] == 2 and m2["journals_citing"] == 1, m2  # L02 revoked
+    assert (m1["reviewed"], m2["reviewed"], m2["review_fixes"], m2["first_pass"]) == (0, 1, 1, 0)  # sent back: not first pass
     assert dragonhoard.learning_stats([], [], {}) == []
 
 

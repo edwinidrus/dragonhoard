@@ -22,6 +22,7 @@ and the lesson screen and ledger.
                                               # orchestrates, OpenCode builds
     dragonhoard.py delegate "<prompt>" [--session <id>]   # hybrid: one OpenCode builder turn
     dragonhoard.py verify M1-T01 [--base HEAD]            # independent re-check of a task
+    dragonhoard.py checkpoint M1-T01                      # commit it, only after verify and review passed
 
 stdlib only. It never edits source or tests and never reads `.env`.
 """
@@ -51,6 +52,7 @@ CLI_REF = re.compile(r'"?\$\{CLAUDE_PLUGIN_ROOT\}/scripts/dragonhoard\.py"?')
 BLOCK_START, BLOCK_END = "<!-- dragonhoard:start -->", "<!-- dragonhoard:end -->"
 MODES = ("solo", "hybrid")  # solo: one host does everything; hybrid: Claude Code orchestrates, OpenCode builds
 EXTERNAL = "external"  # a role answered by the orchestrating session, not by a host model
+ORCHESTRATOR_ROLES = ("judge", "reviewer")  # external by default in hybrid
 ORCHESTRATOR_SKILLS = ("conduct",)
 
 # What each role needs. Requirements only, never model names: the current model suggests
@@ -73,6 +75,12 @@ ROLES: dict[str, dict[str, Any]] = {
         "runs": "rarely: option comparison and lesson review",
         "default": "opus",
         "permission": {"edit": "deny", "bash": "deny", "webfetch": "deny"},
+    },
+    "reviewer": {
+        "needs": "careful code reading at mid cost; a fresh context, never the session that built",
+        "runs": "once per finished task, after verify passes",
+        "default": "sonnet",
+        "permission": {"edit": "deny", "bash": "allow", "webfetch": "deny"},
     },
     "builder": {  # hybrid only: the OpenCode main session itself, never a subagent
         "needs": "solid coding and test running at the lowest cost; follows a skill step by step",
@@ -152,11 +160,11 @@ def save_config(project: Path, config: dict[str, Any]) -> None:
 
 def role_models(config: dict[str, Any]) -> dict[str, str | None]:
     """Configured model per role; Claude Code falls back to its tier aliases, others to unset.
-    Hybrid adds the builder role and answers the judge in the orchestrating session."""
+    Hybrid adds the builder role and answers the judge and the reviewer in the orchestrating session."""
     claude = config["host"] == "claude-code"
     hybrid = config.get("mode") == "hybrid"
     return {
-        role: config["models"].get(role) or (EXTERNAL if hybrid and role == "judge" else None)
+        role: config["models"].get(role) or (EXTERNAL if hybrid and role in ORCHESTRATOR_ROLES else None)
         or (spec["default"] if claude else None)
         for role, spec in ROLES.items()
         if role != "builder" or hybrid
@@ -424,7 +432,7 @@ def _task_line(task: dict[str, str]) -> str:
 
 # --- learning stats ----------------------------------------------------------------------
 
-FIRST_PASS_SPOILERS = ("attempt", "verify.failed", "task.blocked")
+FIRST_PASS_SPOILERS = ("attempt", "verify.failed", "review.failed", "task.blocked")
 MILESTONE = re.compile(r"M\d+(?=-T)")
 
 
@@ -445,9 +453,12 @@ def learning_stats(
     for event in events:  # append-only, so the first event of a milestone is its start
         found = MILESTONE.match(event["task"])
         if found:
-            row = rows.setdefault(found.group(), {"start": event["ts"], "done": set(), "journals": 0, "citing": 0})
+            row = rows.setdefault(found.group(), {"start": event["ts"], "done": set(), "journals": 0, "citing": 0,
+                                                  "review.passed": set(), "review.failed": set()})
             if event["kind"] == "task.done":
                 row["done"].add(event["task"])
+            elif event["kind"] in ("review.passed", "review.failed"):
+                row[event["kind"]].add(event["task"])
     for name, text in journals.items():
         found = MILESTONE.match(name)
         if found and found.group() in rows:
@@ -463,6 +474,7 @@ def learning_stats(
             "milestone": milestone, "done": len(row["done"]), "first_pass": first,
             "first_pass_pct": round(100 * first / len(row["done"])) if row["done"] else None,
             "lessons_in_force": in_force, "journals": row["journals"], "journals_citing": row["citing"],
+            "reviewed": len(row["review.passed"] | row["review.failed"]), "review_fixes": len(row["review.failed"]),
         })
     return result
 
@@ -591,11 +603,12 @@ def cmd_stats(workspace: Workspace, args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(rows))
         return 0
-    table = [["Milestone", "Done", "First pass", "Lessons in force", "Journals citing a lesson"]]
+    table = [["Milestone", "Done", "First pass", "Lessons in force", "Journals citing a lesson", "Reviewed (sent back)"]]
     for r in rows:
         pct = "-" if r["first_pass_pct"] is None else f"{r['first_pass_pct']} %"
         table.append([r["milestone"], str(r["done"]), f"{r['first_pass']} ({pct})",
-                      str(r["lessons_in_force"]), f"{r['journals_citing']}/{r['journals']}"])
+                      str(r["lessons_in_force"]), f"{r['journals_citing']}/{r['journals']}",
+                      f"{r['reviewed']} ({r['review_fixes']})"])
     widths = [max(len(row[i]) for row in table) for i in range(len(table[0]))]
     for i, row in enumerate(table):
         print("| " + " | ".join(cell.ljust(w) for cell, w in zip(row, widths)) + " |")
@@ -786,7 +799,7 @@ def rules_block(host: str, skills: list[str], config: dict[str, Any]) -> str:
         "  its output before anything else.",
         f"- Skills: {', '.join('`' + s + '`' for s in skills)}.",
         f"- {roles}",
-        f"- How to run a role here: `python3 {VENDOR_DIR}/scripts/dragonhoard.py role <scout|spiker|judge>`.",
+        f"- How to run a role here: `python3 {VENDOR_DIR}/scripts/dragonhoard.py role <scout|spiker|judge|reviewer>`.",
         *hybrid,
         "- If superpowers is installed, use only its discipline skills (test-driven-development,",
         "  systematic-debugging, verification-before-completion, receiving-code-review). Its planning,",
@@ -907,6 +920,15 @@ def cmd_role(project: Path, args: argparse.Namespace) -> int:
     name = agent_name(host, role)
     worktree = ("one git worktree per option: `git worktree add ../<repo>-spike-<option> -b spike/<option>`; "
                 "the spike works only there and is never merged")
+    if role == "reviewer" and model == EXTERNAL:
+        print("SKIP verify and review. The orchestrating session runs both on this task after your HANDOFF; "
+              "never review your own work.")
+        return 0
+    if role == "reviewer" and host != "claude-code" and not HOSTS[host]["agents"]:
+        print("Run `verify`, then SKIP the review: this host has no separate context to review in, and a "
+              "session never reviews its own work. The gate review covers this task.")
+        print("Journal: record `review skipped: no reviewer on this host`.")
+        return 0
     if model == EXTERNAL:
         print("PAUSE. The judge is external: the orchestrating session answers it. Stop now and end "
               "your reply with the HANDOFF block, status JUDGE, and a judge request: the question, the "
@@ -923,9 +945,13 @@ def cmd_role(project: Path, args: argparse.Namespace) -> int:
     if host == "claude-code":
         extra = ', isolation: "worktree"' if role == "spiker" else ""
         print(f"Spawn subagent_type `{name}` with model `{model}`{extra}. Put several in one message to run them in parallel.")
+        if role == "reviewer":
+            print("Its prompt is the path of the task pack, nothing else. It reads the diff itself.")
     elif HOSTS[host]["agents"]:
         print(f"Invoke the subagent `{name}` (defined in {HOSTS[host]['agents']}/).")
         print(f"Its model: {model or 'unset, so it inherits the session model; run the models skill first'}.")
+        if role == "reviewer":
+            print("Its prompt is the path of the task pack, nothing else. It reads the diff itself.")
         if role == "spiker":
             print(f"Before invoking, create {worktree}. Pass that path to the subagent.")
     elif role == "judge":
@@ -1163,6 +1189,37 @@ def lower_effort(model: str, floor: str) -> str:
     return f"{base}#{EFFORT_LADDER[step]}" if step <= EFFORT_LADDER.index(floor) else model
 
 
+SECRET_FILE = re.compile(r"(^|/)\.env(\.|$)|\.(pem|key|p12|pfx)$|(^|/)id_(rsa|ed25519)$")
+
+
+def cmd_checkpoint(workspace: Workspace, args: argparse.Namespace) -> int:
+    """Commit a task's work, and only after verify and then review passed. It never pushes."""
+    project = workspace.project
+    row = next((r for r in status_rows(workspace.status_text()) if r["task"] == args.task), None)
+    kinds = [e["kind"] for e in read_jsonl(workspace.events)
+             if e["task"] == args.task and e["kind"].startswith(("verify.", "review."))]
+    verified = max((i for i, kind in enumerate(kinds) if kind.startswith("verify.")), default=-1)
+    reviews = [kind for kind in kinds[verified + 1:] if kind.startswith("review.")]
+    pending = [line[3:].split(" -> ")[-1] for line in git(project, "status", "--porcelain", "-uall").splitlines()]
+    secrets = sorted(f for f in pending if SECRET_FILE.search(f))
+    reason = (f"{args.task} is not in STATUS.md" if row is None
+              else "the last verify did not pass" if verified < 0 or kinds[verified] != "verify.passed"
+              else "no review.passed since the last verify" if reviews[-1:] != ["review.passed"]
+              else f"it would commit {secrets}; ignore or remove them first" if secrets
+              else "nothing to commit" if not pending else "")
+    if reason:
+        print(f"checkpoint REFUSED: {reason}")
+        return 1
+    subprocess.run(["git", "add", "-A"], cwd=project, check=True)
+    done = subprocess.run(["git", "commit", "-q", "-m", f"checkpoint {args.task}: {row['title']}"],
+                          cwd=project, capture_output=True, text=True)
+    if done.returncode != 0:
+        print(f"checkpoint FAILED: {(done.stdout + done.stderr).strip().splitlines()[-1:]}")
+        return 1
+    print(f"checkpoint {args.task}: {git(project, 'log', '-1', '--format=%h %s').strip()}")
+    return 0
+
+
 def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     """One builder turn in OpenCode. Prints only a stats line and the HANDOFF block: the raw
     transcript goes to <root>/logs/sessions/, never into the orchestrator's context."""
@@ -1307,6 +1364,7 @@ def main(argv: list[str] | None = None) -> int:
     verify = sub.add_parser("verify")
     verify.add_argument("task")
     verify.add_argument("--base", default="HEAD", help="revision the task started from")
+    sub.add_parser("checkpoint").add_argument("task")
     models = sub.add_parser("models")
     models.add_argument("--set", nargs="+", metavar="ROLE=MODEL")
     models.add_argument("--why", default="")
@@ -1347,7 +1405,7 @@ def main(argv: list[str] | None = None) -> int:
         print(workspace.write_digest())
         return 0
     handlers = {"next": cmd_next, "log": cmd_log, "check": cmd_check, "lesson": cmd_lesson,
-                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats, "quick": cmd_quick, "lint": cmd_lint}
+                "delegate": cmd_delegate, "verify": cmd_verify, "stats": cmd_stats, "quick": cmd_quick, "lint": cmd_lint, "checkpoint": cmd_checkpoint}
     return handlers[args.command](workspace, args)
 
 

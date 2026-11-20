@@ -46,6 +46,7 @@ packs, so a coding agent loads only the context one task needs.
    | **Build** | Smallest change that satisfies acceptance. Stay inside the pack's file list. |
    | **Test** | Focused test, then the standard checks. Tick every acceptance item. |
    | **Record** | Journal entry, `PROGRESS.md` row with real output, `STATUS.md` row, event line, digest, `dragonhoard.py check`. |
+   | **Review** | `dragonhoard.py verify <task>`, then the reviewer role reads the diff against the pack. A `fix` verdict is a new attempt. |
 
 4. **Stop.** Report the next task. Commits are an owner action.
 
@@ -93,13 +94,14 @@ whole journey without reading every journal. `DIGEST.md` is the compact view of 
 
 ## Roles and models
 
-Three roles help the main session. Their models live in `dragonhoard.json` under `models`.
+Four roles help the main session. Their models live in `dragonhoard.json` under `models`.
 
 | Role | Used in | Needs |
 |---|---|---|
 | `scout` | Explore: fact retrieval | fast, cheap, reliable tool use |
 | `spiker` | Explore: one throwaway prototype per option | solid coding at mid cost |
 | `judge` | Explore comparison, lesson review | strongest available reasoning |
+| `reviewer` | After verify: one task's diff against its pack | careful code reading at mid cost, fresh context |
 
 - `dragonhoard.py models` shows the current mapping and what each role needs.
 - The models skill has the current model suggest a mapping; the owner confirms it.

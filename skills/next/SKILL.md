@@ -94,7 +94,22 @@ it. An attempt with Outcome FAIL and no `Root cause` line fails `dragonhoard.py 
    dragonhoard.py check   # must PASS
    ```
 
-5. If this was the milestone's last task, run the `GATE.md` commands. Append the real output to
+5. Verify and review. Run `dragonhoard.py role reviewer` and follow what it prints; when it says
+   SKIP, skip that part.
+
+   ```bash
+   dragonhoard.py verify <task>   # re-runs the checks; checks scope, weakened tests and the journal
+   ```
+
+   - `verify` FAIL: fix only what the FAIL lines name. That is a new attempt (section 5).
+     `verify` compares with the last commit, so uncommitted work from an earlier task shows up
+     under scope: report it, do not touch it.
+   - Then run the reviewer, in a fresh context, with the pack path as its whole prompt.
+   - Verdict `fix`: run `dragonhoard.py log <task> review.failed "<the critical and important lines>"`,
+     fix exactly those as a new attempt, then verify and review again.
+   - Verdict `approve`: run `dragonhoard.py log <task> review.passed "<n> minor: <one line each, or none>"`.
+
+6. If this was the milestone's last task, run the `GATE.md` commands. Append the real output to
    its results log, set the gate row in `STATUS.md`, and run
    `dragonhoard.py log - gate.run "G<n> PASSED|PARTIAL: <why>"`.
 
@@ -108,7 +123,8 @@ it. An attempt with Outcome FAIL and no `Root cause` line fails `dragonhoard.py 
 ## 8. Stop
 
 Report what was done, the evidence, and the next task (`dragonhoard.py next`). Commits are an
-owner action; do not commit unless asked.
+owner action. Offer `dragonhoard.py checkpoint <task>`: it commits the task's work, and refuses
+unless verify and then review passed. Run it only when the owner says so.
 
 If the journal shows a FAIL→PASS story, a surprising root cause or an owner correction, offer
 `/dragonhoard:learn`.
