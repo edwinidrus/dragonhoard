@@ -256,8 +256,8 @@ def emit(kind, **part):
 emit("step_start")
 if behaviour == "hang":
     time.sleep(30)
-if behaviour in ("quota", "novariant"):
-    message = "Rate limit exceeded. Please try again later." if behaviour == "quota" else "Variant unavailable for x: xhigh"
+if behaviour in ("quota", "novariant", "nocredit"):
+    message = {"quota": "Rate limit exceeded. Please try again later.", "nocredit": "402 Payment Required: insufficient credits"}.get(behaviour, "Variant unavailable for x: xhigh")
     print(json.dumps({"type": "error", "sessionID": "ses_stub1234", "error": {"type": "provider.quota" if behaviour == "quota" else "provider.no-route", "message": message}}), flush=True)
     sys.exit(0)
 emit("step_finish", tokens={"input": 10, "output": 5, "reasoning": 1, "cache": {"read": 100}}, cost=0)
@@ -325,6 +325,11 @@ def test_hybrid(tmp: Path) -> None:
     assert "FAIL  scope" in run("--project", str(tmp), "verify", "M1-T01")[1]
     journal.write_text(journal.read_text() + "- Also changed `src/extra.js` (reported).\n")
     assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0  # a reported extra is the owner's call
+    explained = journal.read_text()
+    journal.write_text(explained + "## Attempt 2\n- Ran: `npm test` -> 1 failing\n- Outcome: FAIL\n- Root cause (if FAIL):\n")
+    assert "FAIL  journal: FAIL without a root cause: ['Attempt 2']" in run("--project", str(tmp), "verify", "M1-T01")[1]
+    journal.write_text(explained + "## Attempt 2\n- Outcome: FAIL\n- Root cause (if FAIL): off-by-one in `a()`\n")
+    assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0
     (tmp / "src/a.js").unlink()
     assert "FAIL  check `test -f src/a.js`" in run("--project", str(tmp), "verify", "M1-T01")[1]
 
@@ -373,6 +378,13 @@ def test_hybrid(tmp: Path) -> None:
     (stub_dir / "calls.txt").unlink()
     code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--quota-wait", "0", "--quota-patience", "0")
     assert code == 3 and "RATE-LIMITED: Rate limit exceeded" in out, out
+    # a spending cap is not a rate limit: no waiting, no retries
+    (stub_dir / "script.txt").write_text("nocredit,ok")
+    (stub_dir / "calls.txt").unlink()
+    code, out = run("--project", str(tmp), "delegate", "z", "--opencode", str(stub), "--quota-wait", "0")
+    assert code == 4 and "OUT-OF-CREDIT: 402 Payment Required" in out, out
+    assert len((stub_dir / "calls.txt").read_text().splitlines()) == 1
+    assert "delegate.out_of_credit" in (tmp / "impl/logs/events.jsonl").read_text()
     assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
     assert fields["status"] == "JUDGE" and fields["judge"] == "pick a or b"

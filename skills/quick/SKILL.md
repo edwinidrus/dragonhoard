@@ -37,6 +37,10 @@ touches.
 
 Restate the goal, the files and the acceptance in three lines or fewer.
 
+If the owner asks for something that breaks a constitution article or a plan rule, do not do
+it: stop, name the rule and ask (a headless builder ends with HANDOFF status QUESTION). After an
+explicit confirmation, run `dragonhoard.py log Q<nn> owner.override "<rule>: <what was allowed>"`.
+
 ## 3. Verify (before building)
 
 - Run every standard check and record the counts. If one is red before your change, record
@@ -57,6 +61,11 @@ Run the focused test, then every standard check. Append an attempt block to the 
 format in `<root>/README.md`, with the real commands and the shortest decisive output line. A
 failed run is an attempt with Outcome FAIL and its root cause. **Two failed bounded attempts at
 the same issue means BLOCKED.**
+
+Before a second attempt, find the root cause. Reproduce the failure, read the whole error, compare
+with the last green state (`git diff`), then state one hypothesis and make one change that tests
+it. An attempt with Outcome FAIL and no `Root cause` line is not
+finished: write the root cause before you try again.
 
 When it passes:
 

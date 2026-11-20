@@ -55,3 +55,10 @@ The owner decides; the coding agent does not. Add project-specific articles belo
 
 17. **Never print, log, commit or paste a secret value**, including in journals, `PROGRESS.md`,
     events and lessons.
+
+## VIII. Owner instructions
+
+18. **An instruction that breaks a rule is a question, not an order.** When the owner asks for
+    something that breaks an article here, a milestone article or a rule in the plan, do not do
+    it. Stop, name the rule, and ask. Continue only after the owner confirms in so many words,
+    and record it as an `owner.override` event.

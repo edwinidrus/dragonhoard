@@ -53,6 +53,9 @@ the result like any other HANDOFF. Delegate exactly one task per builder session
   never below `effort_floor` in `dragonhoard.json` (default `high`). It logs each wait as
   `delegate.rate_limited`. Tell the owner, and offer a different builder model through
   `/dragonhoard:models`; never switch on your own. Resume with `--session <id>`.
+- **OUT-OF-CREDIT** (exit code 4): the provider's spending cap is reached, and waiting does not
+  lift it. Tell the owner and stop. After a top-up or a builder change through
+  `/dragonhoard:models`, resume with `--session <id>`.
 - **No HANDOFF** after its retries: run `delegate "Report where you are. End with the HANDOFF block." --session <id>`
   once. If that also fails, count it as a failed attempt (step 4).
 

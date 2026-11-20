@@ -1087,7 +1087,11 @@ def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
     results.append(("scope", not unreported, f"outside the pack: {extra or 'none'}; unreported: {unreported or 'none'}"))
     weakened = weakened_tests(project, args.base)
     results.append(("tests not weakened", not weakened, weakened or "ok"))
-    results.append(("journal", "- Ran:" in journal and "- Outcome:" in journal, "attempt with Ran and Outcome"))
+    unexplained = [block.splitlines()[0].strip() for block in re.split(r"^## (?=Attempt)", journal, flags=re.M)[1:]
+                   if re.search(r"^- Outcome:\s*FAIL", block, re.M)
+                   and not re.search(r"^- Root cause[^:\n]*:[ \t]*\S", block, re.M)]
+    results.append(("journal", "- Ran:" in journal and "- Outcome:" in journal and not unexplained,
+                    f"FAIL without a root cause: {unexplained}" if unexplained else "attempt with Ran and Outcome"))
     for name, ok, detail in results:
         print(f"{'PASS' if ok else 'FAIL'}  {name}: {detail}")
     failed = [name for name, ok, _ in results if not ok]
@@ -1179,7 +1183,7 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "delegate.started",
                                     "summary": f"{builder}: {args.prompt[:100]}", "ref": reference})
     floor = args.effort_floor or config.get("effort_floor", "high")
-    attempt, quota_since, rate_limited = 0, None, ""
+    attempt, quota_since, rate_limited, no_credit = 0, None, "", ""
     while True:
         attempt += 1
         command = [args.opencode, "run", "--format", "json", "-m", builder,
@@ -1209,6 +1213,11 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
             attempt -= 1
             prompt = resume if session else args.prompt
             continue
+        if re.search(r"\b402\b|Payment Required|insufficient (credits?|balance|funds)", errors, re.I):
+            # A spending cap does not lift by waiting: stop at once and hand it to the owner.
+            no_credit = re.search(r'"message": "([^"]+)"', errors)
+            no_credit = no_credit.group(1) if no_credit else "out of credit"
+            break
         if re.search(r"quota|UsageLimit|Rate limit", errors):
             # A provider limit is not a builder failure: wait it out instead of spending retries,
             # stepping the effort down meanwhile (never below the floor; the owner sets it).
@@ -1237,9 +1246,15 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
     print(f"delegate session {session} | {stats}")
     fields = handoff[0] if handoff else {}
     task = fields.get("task", "-") if re.fullmatch(TASK_ID, fields.get("task", "")) else "-"
-    status = fields.get("status") or ("RATE-LIMITED" if rate_limited else "NO-HANDOFF")
+    status = fields.get("status") or ("OUT-OF-CREDIT" if no_credit else "RATE-LIMITED" if rate_limited else "NO-HANDOFF")
     append_jsonl(workspace.events, {"ts": now(), "task": task, "kind": "delegate.done",
                                     "summary": f"{status} | session {session} | {stats}", "ref": reference})
+    if no_credit and handoff is None:
+        append_jsonl(workspace.events, {"ts": now(), "task": "-", "kind": "delegate.out_of_credit",
+                                        "summary": f"{no_credit}; model {builder}", "ref": reference})
+        print(f"OUT-OF-CREDIT: {no_credit}. Waiting will not help: top up or change the builder model, "
+              f"then resume with --session {session}.")
+        return 4
     if rate_limited and handoff is None:
         print(f"RATE-LIMITED: {rate_limited}. Waited {args.quota_patience:.0f}s; resume later with --session {session}.")
         return 3

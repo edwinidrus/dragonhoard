@@ -39,6 +39,10 @@ If the pack is wrong or stale (it names an interface that does not exist, or con
 `option.chosen` event or a lesson): record BLOCKED (section 7) and stop. Never quietly rewrite a
 pack's scope.
 
+If the owner asks for something that breaks a constitution article or a plan rule, do not do
+it: stop, name the rule and ask (a headless builder ends with HANDOFF status QUESTION). After an
+explicit confirmation, run `dragonhoard.py log <task> owner.override "<rule>: <what was allowed>"`.
+
 ## 2. Explore (only if needed)
 
 Skip this step when the pack's Open options says "none" and you have no unknowns.
@@ -70,6 +74,10 @@ Run the focused test, then every standard check. Tick each acceptance item with 
 
 If a run fails, write a journal attempt (Outcome FAIL, with the root cause and evidence) and try
 again. **Two failed bounded attempts at the same issue means BLOCKED.**
+
+Before a second attempt, find the root cause. Reproduce the failure, read the whole error, compare
+with the last green state (`git diff`), then state one hypothesis and make one change that tests
+it. An attempt with Outcome FAIL and no `Root cause` line fails `dragonhoard.py verify`.
 
 ## 6. Record
 
