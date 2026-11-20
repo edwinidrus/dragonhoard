@@ -75,6 +75,33 @@ def test_mismatch_and_missing(tmp: Path) -> None:
     assert dragonhoard.missing_files(rows, tmp) == ["M1-T01: src/b.py"]
 
 
+def test_patterns(tmp: Path) -> None:
+    for name in (".env", "a/.env", ".env.local", ".env.production", "x.pem", "x.key", "x.p12", "x.pfx", "id_rsa",
+                 "id_dsa", "id_ecdsa", "id_ed25519", "k/id_ed25519", ".netrc", "a/.netrc", "credentials.json",
+                 "a/credentials.json"):
+        assert dragonhoard.SECRET_FILE.search(name), name
+    for name in (".env.example", ".env.sample", ".env.template", ".env.dist", "src/environment.py", "docs/keys.md",
+                 ".npmrc", ".envrc", "src/key.py", "id_rsa.pub"):
+        assert not dragonhoard.SECRET_FILE.search(name), name
+    for text in ("402 Payment Required: insufficient credits", "Payment Required", "Insufficient balance",
+                 '{"statusCode": 402, "message": "x"}', '"status": 402', "HTTP 402"):
+        assert dragonhoard.OUT_OF_CREDIT.search(text), text
+    for text in ("Rate limit exceeded: 402 tokens per minute", "retry in 402 ms", "4020"):
+        assert not dragonhoard.OUT_OF_CREDIT.search(text), text
+    import subprocess
+    sh = lambda *a: subprocess.run(["git", *a], cwd=tmp, check=True, capture_output=True)  # noqa: E731
+    sh("init", "-q")
+    sh("config", "user.name", "t")
+    sh("config", "user.email", "t@t")
+    (tmp / "old.txt").write_text("x")
+    sh("add", "old.txt")
+    sh("commit", "-q", "-m", "i")
+    sh("mv", "old.txt", "new.txt")
+    (tmp / "my dir").mkdir()
+    (tmp / "my dir/a b.txt").write_text("y")
+    assert sorted(dragonhoard.pending_files(tmp)) == ["my dir/a b.txt", "new.txt"], dragonhoard.pending_files(tmp)
+
+
 def test_lint(tmp: Path) -> None:
     assert run("--project", str(tmp), "init", "--root", "impl")[0] == 0
     (tmp / "impl/STATUS.md").write_text(STATUS)
@@ -87,6 +114,10 @@ def test_lint(tmp: Path) -> None:
                     "  `save()` from M1-T03 at `src/later.py`\n- **Produces:** `b()`\n")
     code, out = run(*project, "lint")
     assert code == 1 and "M1-T02: consumes M1-T03: it comes later" in out and "1 packs | 1 problems" in out, out
+    pack.write_text("- **Files:** `src/b.py`\n- **Consumes:** M1-T03 will add\n    `src/later.py` (planned)\n"
+                    "  - `src/a.py:2`\n")
+    out = run(*project, "lint", "M1-T02")[1]
+    assert "M1-T03: it comes later" in out and "src/later.py: missing" not in out, out
     pack.write_text("- **Files:** `src/b.py`\n- **Consumes:** `src/a.py:9`, `src/gone.py::f`\n"
                     "  - M9-T01 `src/x.py`\n  - M1-T01 `src/done.py`\n")
     out = run(*project, "lint", "M1-T02")[1]
@@ -345,6 +376,11 @@ def test_hybrid(tmp: Path) -> None:
     assert "FAIL  journal: FAIL without a root cause: ['Attempt 2']" in run("--project", str(tmp), "verify", "M1-T01")[1]
     journal.write_text(explained + "## Attempt 2\n- Outcome: FAIL\n- Root cause (if FAIL): off-by-one in `a()`\n")
     assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0
+    journal.write_text(explained + "## Attempt 2\n- **Outcome:** FAIL\n- **Root cause (if FAIL):** off-by-one\n")
+    assert run("--project", str(tmp), "verify", "M1-T01")[0] == 0
+    journal.write_text(explained + "## Attempt 2\n- **Outcome:** FAIL\n- **Root cause (if FAIL):**\n")
+    assert "FAIL  journal" in run("--project", str(tmp), "verify", "M1-T01")[1]
+    journal.write_text(explained)
     (tmp / "src/a.js").unlink()
     assert "FAIL  check `test -f src/a.js`" in run("--project", str(tmp), "verify", "M1-T01")[1]
 
@@ -413,12 +449,19 @@ def test_hybrid(tmp: Path) -> None:
     run(*project, "log", "M1-T01", "review.failed", "important | src/a.js:1 | wrong")
     assert "no review.passed" in run(*project, "checkpoint", "M1-T01")[1]  # the latest review decides
     run(*project, "log", "M1-T01", "review.passed", "fixed")
+    old = (tmp / "src/a.js").read_text()
+    (tmp / "src/a.js").write_text(old + "// late edit\n")
+    assert "the work changed since the last verify" in run(*project, "checkpoint", "M1-T01")[1]
+    (tmp / "src/a.js").write_text(old)
+    assert '"tree": "' in (tmp / "impl/logs/events.jsonl").read_text()
     (tmp / ".env").write_text("KEY=1")
     assert "['.env']" in run(*project, "checkpoint", "M1-T01")[1] and head() == "base"
     (tmp / ".env").unlink()
     code, out = run(*project, "checkpoint", "M1-T01")
     assert code == 0 and head() == "checkpoint M1-T01: t", out
     assert "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
+    run(*project, "log", "-", "gate.run", "G1 PASSED")  # only dragonhoard's own files changed: no new verify needed
+    assert run(*project, "checkpoint", "M1-T01")[0] == 0 and "nothing to commit" in run(*project, "checkpoint", "M1-T01")[1]
     assert "not in STATUS.md" in run(*project, "checkpoint", "M9-T09")[1]
     assert dragonhoard.lower_effort("p/m#high", "high") == "p/m#high" and dragonhoard.lower_effort("p/m", "high") == "p/m"
     fields, raw = dragonhoard.parse_handoff("**HANDOFF**\n- **status:** `JUDGE`\n- judge: pick a or b\n")
@@ -471,6 +514,8 @@ if __name__ == "__main__":
     test_screen()
     test_stats()
     test_skills()
+    with tempfile.TemporaryDirectory() as folder:
+        test_patterns(Path(folder))
     with tempfile.TemporaryDirectory() as folder:
         test_hosts(Path(folder))
     with tempfile.TemporaryDirectory() as folder:

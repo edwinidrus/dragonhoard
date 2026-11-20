@@ -30,6 +30,7 @@ stdlib only. It never edits source or tests and never reads `.env`.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -1013,11 +1014,24 @@ def git(project: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=project, capture_output=True, text=True).stdout
 
 
+def pending_files(project: Path) -> list[str]:
+    """Paths with uncommitted changes, unquoted (a rename gives its new path)."""
+    fields = git(project, "status", "--porcelain", "-z", "-uall").split("\0")
+    paths, i = [], 0
+    while i < len(fields):
+        entry = fields[i]
+        i += 1
+        if len(entry) > 3:
+            paths.append(entry[3:])
+            if "R" in entry[:2] or "C" in entry[:2]:
+                i += 1  # the next field is the old path
+    return paths
+
+
 def changed_files(project: Path, base: str) -> set[str]:
     """Files changed since `base`: committed after it, plus anything pending in the work tree."""
-    committed = git(project, "diff", "--name-only", base, "HEAD").split()
-    pending = [line[3:].split(" -> ")[-1] for line in git(project, "status", "--porcelain", "-uall").splitlines()]
-    return set(committed) | set(pending)
+    committed = [f for f in git(project, "diff", "--name-only", "-z", base, "HEAD").split("\0") if f]
+    return set(committed) | set(pending_files(project))
 
 
 def pack_field(pack: str, name: str) -> str:
@@ -1038,7 +1052,15 @@ def lint_pack(task: str, pack: str, rows: list[dict[str, str]], project: Path) -
     order = [row["task"] for row in rows]
     status = {row["task"]: row["status"] for row in rows}
     problems = []
-    for line in pack_field(pack, "Consumes").splitlines():
+    entries: list[str] = []
+    for text in pack_field(pack, "Consumes").splitlines():
+        if not text.strip():
+            continue
+        if not entries or text.strip().startswith(("- ", "* ")):
+            entries.append(text)
+        else:
+            entries[-1] += " " + text.strip()
+    for line in (piece for entry in entries for piece in entry.split(";")):
         producers = [ref for ref in re.findall(TASK_ID, line) if ref != task]
         for ref in producers:
             if ref not in status:
@@ -1099,6 +1121,21 @@ def weakened_tests(project: Path, base: str) -> list[str]:
     return problems
 
 
+def bookkeeping(config: dict[str, Any]) -> tuple[str, ...]:
+    """Path prefixes that are dragonhoard's own files, not the task's work."""
+    return (f"{config['root']}/", CONFIG_NAME, f"{VENDOR_DIR}/", ".opencode/", "AGENTS.md", "opencode.json")
+
+
+def tree_fingerprint(project: Path, skip: tuple[str, ...]) -> str:
+    """sha256 over the pending files outside `skip` (path and content), so a later edit is noticed."""
+    digest = hashlib.sha256()
+    for path in sorted(pending_files(project)):
+        if not path.startswith(skip):
+            file = project / path
+            digest.update(path.encode() + b"\0" + (file.read_bytes() if file.is_file() else b"<deleted>") + b"\0")
+    return digest.hexdigest()
+
+
 def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
     """The orchestrator's own check of a builder's task; it never trusts the builder's report."""
     config, project = workspace.config, workspace.project
@@ -1115,15 +1152,15 @@ def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
         run = subprocess.run(command, shell=True, cwd=project, capture_output=True, text=True, timeout=1800)
         tail = (run.stdout + run.stderr).strip().splitlines()[-1:] or [""]
         results.append((f"check `{command}`", run.returncode == 0, f"exit {run.returncode}: {tail[0][:120]}"))
-    bookkeeping = (f"{config['root']}/", CONFIG_NAME, f"{VENDOR_DIR}/", ".opencode/", "AGENTS.md", "opencode.json")
-    extra = sorted(f for f in changed_files(project, args.base) - pack_files(pack) if not f.startswith(bookkeeping))
+    skip = bookkeeping(config)
+    extra = sorted(f for f in changed_files(project, args.base) - pack_files(pack) if not f.startswith(skip))
     unreported = [f for f in extra if f not in journal]
     results.append(("scope", not unreported, f"outside the pack: {extra or 'none'}; unreported: {unreported or 'none'}"))
     weakened = weakened_tests(project, args.base)
     results.append(("tests not weakened", not weakened, weakened or "ok"))
     unexplained = [block.splitlines()[0].strip() for block in re.split(r"^## (?=Attempt)", journal, flags=re.M)[1:]
-                   if re.search(r"^- Outcome:\s*FAIL", block, re.M)
-                   and not re.search(r"^- Root cause[^:\n]*:[ \t]*\S", block, re.M)]
+                   if re.search(r"^- (\*\*)?Outcome(:\*\*|\*\*:|:)\s*FAIL", block, re.M)
+                   and not re.search(r"^- (\*\*)?Root cause[^:\n]*:[ \t*]*[^\s*]", block, re.M)]
     results.append(("journal", "- Ran:" in journal and "- Outcome:" in journal and not unexplained,
                     f"FAIL without a root cause: {unexplained}" if unexplained else "attempt with Ran and Outcome"))
     for name, ok, detail in results:
@@ -1131,7 +1168,8 @@ def cmd_verify(workspace: Workspace, args: argparse.Namespace) -> int:
     failed = [name for name, ok, _ in results if not ok]
     print(f"verify: {'FAIL' if failed else 'PASS'} | {args.task} | {len(failed)} failed")
     append_jsonl(workspace.events, {"ts": now(), "task": args.task, "kind": "verify.failed" if failed else "verify.passed",
-                                    "summary": "; ".join(failed) or "all checks", "ref": f"base {args.base}"})
+                                    "summary": "; ".join(failed) or "all checks", "ref": f"base {args.base}",
+                                    "tree": tree_fingerprint(project, skip)})
     return 1 if failed else 0
 
 
@@ -1197,24 +1235,33 @@ def lower_effort(model: str, floor: str) -> str:
     return f"{base}#{EFFORT_LADDER[step]}" if step <= EFFORT_LADDER.index(floor) else model
 
 
-SECRET_FILE = re.compile(r"(^|/)\.env(\.|$)|\.(pem|key|p12|pfx)$|(^|/)id_(rsa|ed25519)$")
+SECRET_FILE = re.compile(r"(^|/)\.env(\.(?!(example|sample|template|dist)$)[^/]*)?$|\.(pem|key|p12|pfx)$"
+                         r"|(^|/)(id_(rsa|dsa|ecdsa|ed25519)|\.netrc|credentials\.json)$")
+OUT_OF_CREDIT = re.compile(r"Payment Required|insufficient (credits?|balance|funds)|\bHTTP\s*402\b"
+                           r"|\bstatus(Code)?\W{0,3}\s*[:=]\s*402\b", re.I)
 
 
 def cmd_checkpoint(workspace: Workspace, args: argparse.Namespace) -> int:
     """Commit a task's work, and only after verify and then review passed. It never pushes."""
     project = workspace.project
     row = next((r for r in status_rows(workspace.status_text()) if r["task"] == args.task), None)
-    kinds = [e["kind"] for e in read_jsonl(workspace.events)
-             if e["task"] == args.task and e["kind"].startswith(("verify.", "review."))]
+    events = [e for e in read_jsonl(workspace.events)
+              if e["task"] == args.task and e["kind"].startswith(("verify.", "review."))]
+    kinds = [e["kind"] for e in events]
     verified = max((i for i, kind in enumerate(kinds) if kind.startswith("verify.")), default=-1)
     reviews = [kind for kind in kinds[verified + 1:] if kind.startswith("review.")]
-    pending = [line[3:].split(" -> ")[-1] for line in git(project, "status", "--porcelain", "-uall").splitlines()]
+    pending = pending_files(project)
+    skip = bookkeeping(workspace.config)
+    work = [f for f in pending if not f.startswith(skip)]  # dragonhoard's own files need no new verify
+    tree = events[verified].get("tree") if verified >= 0 else None
     secrets = sorted(f for f in pending if SECRET_FILE.search(f))
     reason = (f"{args.task} is not in STATUS.md" if row is None
               else "the last verify did not pass" if verified < 0 or kinds[verified] != "verify.passed"
               else "no review.passed since the last verify" if reviews[-1:] != ["review.passed"]
+              else "nothing to commit" if not pending
               else f"it would commit {secrets}; ignore or remove them first" if secrets
-              else "nothing to commit" if not pending else "")
+              else "the work changed since the last verify; run verify and the review again"
+              if work and tree != tree_fingerprint(project, skip) else "")
     if reason:
         print(f"checkpoint REFUSED: {reason}")
         return 1
@@ -1278,7 +1325,7 @@ def cmd_delegate(workspace: Workspace, args: argparse.Namespace) -> int:
             attempt -= 1
             prompt = resume if session else args.prompt
             continue
-        if re.search(r"\b402\b|Payment Required|insufficient (credits?|balance|funds)", errors, re.I):
+        if OUT_OF_CREDIT.search(errors):
             # A spending cap does not lift by waiting: stop at once and hand it to the owner.
             no_credit = re.search(r'"message": "([^"]+)"', errors)
             no_credit = no_credit.group(1) if no_credit else "out of credit"
